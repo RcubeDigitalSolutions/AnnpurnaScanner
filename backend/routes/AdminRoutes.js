@@ -13,3 +13,4 @@ router.delete("/delete-restaurant/:id", AdminController.deleteRestaurant);
 //get all restaurant
 router.get("/restaurants", AdminController.getAllRestaurants);
 
+module.exports = router;
