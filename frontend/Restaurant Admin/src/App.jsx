@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
-import Login from './Components/Pages/Login'
-import Dashboard from './Components/Pages/Dashboard'
+import Login from './Components/Dashboard/Pages/Login'
+import Dashboard from './Components/Dashboard/Pages/Dashboard'
 import Sidebar from './Components/Common/Sidebar'
+import Menu from './Components/UserMenu/Pages/Menu'
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -82,7 +83,12 @@ const AppRoutes = ({ isLoggedIn, setIsLoggedIn }) => {
       {/* Default Route - Redirect to login or admin based on auth status */}
       <Route 
         path="/" 
-        element={<Navigate to={isLoggedIn ? "/admin/dashboard" : "/login"} replace />} 
+        element={
+       
+          
+              <Menu />
+           
+        }
       />
 
       {/* Catch all - redirect to home */}
