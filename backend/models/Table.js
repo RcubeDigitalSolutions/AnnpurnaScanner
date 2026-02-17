@@ -12,3 +12,4 @@ const TableSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+modeule.exports = mongoose.model("Table", TableSchema);
