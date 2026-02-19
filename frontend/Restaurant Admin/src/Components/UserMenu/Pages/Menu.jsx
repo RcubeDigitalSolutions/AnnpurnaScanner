@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Search, ChevronDown, ChevronUp, X, Home as HomeIcon, UtensilsCrossed, ClipboardList, Receipt, StickyNote, Users } from 'lucide-react'
+import { Search, ChevronDown, ChevronUp, Home as HomeIcon, UtensilsCrossed, ClipboardList, Receipt, Users } from 'lucide-react'
+import Order from './Order'
 
 const Menu = () => {
   const [cart, setCart] = useState([])
@@ -8,8 +9,9 @@ const Menu = () => {
   const [showCartModal, setShowCartModal] = useState(false)
   const [expandedItems, setExpandedItems] = useState({})
   const [itemNotes, setItemNotes] = useState({})
-  const [orderNote, setOrderNote] = useState('')
   const [activeNav, setActiveNav] = useState('menu')
+  const [showCategoryTabs, setShowCategoryTabs] = useState(true)
+  const [selectedExtras, setSelectedExtras] = useState({})
 
   // Sample menu data - Replace with API call later
   const menuItems = [
@@ -88,11 +90,15 @@ const Menu = () => {
     if (existingItem) {
       setCart(cart.map(cartItem => 
         cartItem.id === item.id 
-          ? { ...cartItem, quantity: cartItem.quantity + 1 }
+          ? {
+              ...cartItem,
+              quantity: cartItem.quantity + 1,
+              selectedSize: item.selectedSize || cartItem.selectedSize || 'regular'
+            }
           : cartItem
       ))
     } else {
-      setCart([...cart, { ...item, quantity: 1 }])
+      setCart([...cart, { ...item, quantity: 1, selectedSize: item.selectedSize || 'regular' }])
     }
   }
 
@@ -114,8 +120,75 @@ const Menu = () => {
     return item ? item.quantity : 0
   }
 
+  const getExtraCharges = (noteText = '') => {
+    const extraChargeRules = [
+      { label: 'Extra Cheese', amount: 40, keywords: ['cheese', 'extra cheese'] },
+      { label: 'Extra Sauce', amount: 20, keywords: ['sauce', 'extra sauce', 'gravy'] },
+      { label: 'Extra Mayo', amount: 15, keywords: ['mayo', 'mayonnaise', 'extra mayo'] },
+      { label: 'Extra Dip', amount: 25, keywords: ['dip', 'extra dip'] },
+      { label: 'Extra Paneer', amount: 60, keywords: ['paneer', 'extra paneer'] },
+      { label: 'Extra Chicken', amount: 90, keywords: ['chicken', 'extra chicken', 'double chicken'] },
+      { label: 'Extra Butter', amount: 30, keywords: ['butter', 'extra butter'] },
+      { label: 'Extra Cream', amount: 25, keywords: ['cream', 'extra cream'] }
+    ]
+
+    const instructions = noteText
+      .split(/\n|,/)
+      .map(instruction => instruction.trim().toLowerCase())
+      .filter(Boolean)
+
+    const matchedExtras = []
+
+    instructions.forEach(instruction => {
+      const rule = extraChargeRules.find(extraRule =>
+        extraRule.keywords.some(keyword => instruction.includes(keyword))
+      )
+
+      if (rule) {
+        matchedExtras.push({
+          label: rule.label,
+          amount: rule.amount,
+          instruction
+        })
+      }
+    })
+
+    const total = matchedExtras.reduce((sum, item) => sum + item.amount, 0)
+    return { total, matchedExtras }
+  }
+
   const getTotalAmount = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0)
+    const sizePriceMap = {
+      regular: 0,
+      medium: 40,
+      large: 80
+    }
+
+    const extrasOptions = [
+      { id: 'cheese', amount: 40 },
+      { id: 'paneer', amount: 60 },
+      { id: 'chicken', amount: 90 },
+      { id: 'sauce', amount: 20 },
+      { id: 'butter', amount: 30 },
+      { id: 'mayo', amount: 15 },
+      { id: 'cream', amount: 25 }
+    ]
+
+    const getItemExtrasTotal = (itemId) => {
+      const itemExtras = selectedExtras[itemId] || {}
+      return Object.entries(itemExtras)
+        .filter(([_, isSelected]) => isSelected)
+        .reduce((sum, [extraId]) => {
+          const extra = extrasOptions.find(e => e.id === extraId)
+          return sum + (extra?.amount || 0)
+        }, 0)
+    }
+
+    return cart.reduce((total, item) => {
+      const sizeExtra = sizePriceMap[item.selectedSize] || 0
+      const itemExtras = getItemExtrasTotal(item.id)
+      return total + ((item.price + sizeExtra + itemExtras) * item.quantity)
+    }, 0)
   }
 
   const toggleReadMore = (itemId) => {
@@ -136,24 +209,24 @@ const Menu = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white shadow-sm">
         {/* Restaurant Info */}
-        <div className="border-b border-gray-200 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-600">
-                <UtensilsCrossed className="h-6 w-6 text-white" />
+        <div className="border-b border-gray-200 px-3 py-2 sm:px-4 sm:py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-600 sm:h-12 sm:w-12">
+                <UtensilsCrossed className="h-5 w-5 text-white sm:h-6 sm:w-6" />
               </div>
-              <div>
-                <h1 className="text-lg font-bold text-gray-900">Big Yellow Door</h1>
+              <div className="min-w-0">
+                <h1 className="truncate text-sm font-bold text-gray-900 sm:text-lg">Big Yellow Door</h1>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 text-sm">
-                <UtensilsCrossed className="h-4 w-4" />
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center gap-1 text-xs text-gray-700 sm:text-sm">
+                <UtensilsCrossed className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span>15</span>
               </div>
-              <button className="flex items-center gap-2 rounded-full border-2 border-teal-500 px-3 py-1.5 text-sm font-semibold text-teal-600">
-                <Users className="h-4 w-4" />
-                Group Order
+              <button className="flex items-center gap-1 rounded-full border-2 border-teal-500 px-2.5 py-1 text-xs font-semibold text-teal-600 whitespace-nowrap sm:gap-2 sm:px-3 sm:py-1.5 sm:text-sm">
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>Group Order</span>
               </button>
             </div>
           </div>
@@ -180,54 +253,63 @@ const Menu = () => {
         </div>
 
         {/* Category Tabs */}
-        <div className="overflow-x-auto px-4 py-3">
-          <div className="flex gap-3">
-            {categories.map((category, index) => (
-              <button
-                key={category.name}
-                onClick={() => setSelectedCategory(category.name)}
-                className="relative flex-shrink-0"
-              >
-                <div className={`relative h-16 w-16 overflow-hidden rounded-xl border-2 ${
-                  selectedCategory === category.name
-                    ? 'border-orange-500'
-                    : 'border-gray-200'
-                }`}>
-                  {index === 0 ? (
-                    <div className="flex h-full w-full items-center justify-center bg-gray-100">
-                      <UtensilsCrossed className="h-8 w-8 text-orange-500" />
-                    </div>
-                  ) : (
-                    <img 
-                      src={category.image} 
-                      alt={category.name}
-                      className="h-full w-full object-cover"
-                    />
-                  )}
-                  {selectedCategory === category.name && (
-                    <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500">
-                      <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <p className="mt-1 text-xs font-medium text-orange-600">
-                  {category.name.split(' ')[0]}
-                </p>
-              </button>
-            ))}
+        {showCategoryTabs && (
+          <div className="overflow-x-auto px-4 py-3">
+            <div className="flex gap-3">
+              {categories.map((category, index) => (
+                <button
+                  key={category.name}
+                  onClick={() => setSelectedCategory(category.name)}
+                  className="relative flex-shrink-0"
+                >
+                  <div className={`relative h-16 w-16 overflow-hidden rounded-xl border-2 ${
+                    selectedCategory === category.name
+                      ? 'border-orange-500'
+                      : 'border-gray-200'
+                  }`}>
+                    {index === 0 ? (
+                      <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                        <UtensilsCrossed className="h-8 w-8 text-orange-500" />
+                      </div>
+                    ) : (
+                      <img 
+                        src={category.image} 
+                        alt={category.name}
+                        className="h-full w-full object-cover"
+                      />
+                    )}
+                    {selectedCategory === category.name && (
+                      <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500">
+                        <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs font-medium text-orange-600">
+                    {category.name.split(' ')[0]}
+                  </p>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Category Title */}
         <div className="border-b border-gray-200 bg-white px-4 py-3">
-          <div className="flex items-center justify-between">
+          <button
+            onClick={() => setShowCategoryTabs((prev) => !prev)}
+            className="flex w-full items-center justify-between"
+          >
             <h2 className="text-base font-bold text-gray-900">
               {selectedCategory} ({filteredItems.length})
             </h2>
-            <ChevronUp className="h-5 w-5 text-gray-600" />
-          </div>
+            {showCategoryTabs ? (
+              <ChevronUp className="h-5 w-5 text-gray-600" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-600" />
+            )}
+          </button>
         </div>
       </header>
 
@@ -381,126 +463,20 @@ const Menu = () => {
         </div>
       </nav>
 
-      {/* Cart Modal */}
-      {showCartModal && cart.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center">
-          <div className="relative w-full max-w-2xl rounded-t-3xl bg-white sm:rounded-2xl" style={{ maxHeight: '85vh' }}>
-            {/* Close Button */}
-            <button
-              onClick={() => setShowCartModal(false)}
-              className="absolute -top-12 left-1/2 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full bg-gray-700 text-white"
-            >
-              <X className="h-6 w-6" />
-            </button>
-
-            {/* Modal Header */}
-            <div className="border-b border-gray-200 px-5 py-4">
-              <h2 className="text-xl font-bold text-gray-900">Your Order Summary</h2>
-            </div>
-
-            {/* Cart Items */}
-            <div className="max-h-96 overflow-y-auto px-5 py-4">
-              {cart.map(item => (
-                <div key={item.id} className="mb-4 border-b border-gray-100 pb-4 last:border-0">
-                  <div className="flex items-start gap-3">
-                    {/* Veg/Non-veg Indicator */}
-                    <div className="flex-shrink-0 pt-1">
-                      <div className={`flex h-5 w-5 items-center justify-center rounded border-2 ${
-                        item.veg ? 'border-green-600' : 'border-red-600'
-                      }`}>
-                        <div className={`h-2.5 w-2.5 rounded-full ${
-                          item.veg ? 'bg-green-600' : 'bg-red-600'
-                        }`}></div>
-                      </div>
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="mb-2 flex items-start justify-between">
-                        <h3 className="text-base font-semibold text-gray-900">{item.name}</h3>
-                        <div className="ml-4 flex items-center gap-3 rounded-lg border-2 border-orange-600 px-3 py-1">
-                          <button
-                            onClick={() => removeFromCart(item.id)}
-                            className="text-lg font-bold text-orange-600"
-                          >
-                            −
-                          </button>
-                          <span className="min-w-[20px] text-center text-sm font-semibold text-orange-600">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => addToCart(item)}
-                            className="text-lg font-bold text-orange-600"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <button
-                          onClick={() => {
-                            const note = prompt('Add a note for this item:')
-                            if (note) {
-                              setItemNotes(prev => ({ ...prev, [item.id]: note }))
-                            }
-                          }}
-                          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
-                        >
-                          <StickyNote className="h-4 w-4" />
-                          {itemNotes[item.id] ? 'Edit Note' : 'Add Note'}
-                        </button>
-                        <p className="text-base font-semibold text-gray-900">
-                          ₹ {(item.price * item.quantity).toFixed(2)}
-                        </p>
-                      </div>
-
-                      {itemNotes[item.id] && (
-                        <p className="mt-1 text-xs text-gray-600 italic">Note: {itemNotes[item.id]}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Order Note */}
-            <div className="border-t border-gray-200 px-5 py-4">
-              <div className="relative">
-                <StickyNote className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Enter a note for the entire order"
-                  value={orderNote}
-                  onChange={(e) => setOrderNote(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 py-3 pl-10 pr-4 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-                />
-              </div>
-            </div>
-
-            {/* Total and Place Order Button */}
-            <div className="bg-orange-600 px-5 py-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-2xl font-bold text-white">₹ {getTotalAmount().toFixed(2)}</p>
-                  <p className="text-xs font-medium uppercase tracking-wide text-white/80">SUBTOTAL</p>
-                </div>
-                <button 
-                  onClick={() => {
-                    alert('Order placed successfully!')
-                    setCart([])
-                    setItemNotes({})
-                    setOrderNote('')
-                    setShowCartModal(false)
-                  }}
-                  className="rounded-lg bg-white px-8 py-3 text-base font-bold text-orange-600 shadow-lg transition hover:bg-gray-50"
-                >
-                  Place Order
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <Order
+        cart={cart}
+        showCartModal={showCartModal}
+        setShowCartModal={setShowCartModal}
+        removeFromCart={removeFromCart}
+        addToCart={addToCart}
+        itemNotes={itemNotes}
+        setItemNotes={setItemNotes}
+        getTotalAmount={getTotalAmount}
+        getExtraCharges={getExtraCharges}
+        setCart={setCart}
+        selectedExtras={selectedExtras}
+        setSelectedExtras={setSelectedExtras}
+      />
     </div>
   )
 }
