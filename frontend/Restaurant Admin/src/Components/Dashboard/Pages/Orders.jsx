@@ -37,6 +37,7 @@ const Orders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [deleteConfirmOrder, setDeleteConfirmOrder] = useState(null);
+  const [openStatusDropdown, setOpenStatusDropdown] = useState(null);
 
   const filteredOrders = useMemo(() => {
     let result = [...orders];
@@ -181,10 +182,40 @@ const Orders = () => {
                         <span className="text-sm font-black text-slate-900">₹{order.totalAmount}</span>
                         <p className="text-[10px] font-bold text-slate-400">{order.items} Items</p>
                       </td>
-                      <td className="px-8 py-6">
-                        <span className={`${s.bg} ${s.text} text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border border-current opacity-80`}>
-                          {s.label}
-                        </span>
+                      <td className="px-8 py-6 relative">
+                        <div className="relative">
+                          <button
+                            onClick={() => setOpenStatusDropdown(openStatusDropdown === order.id ? null : order.id)}
+                            className={`${s.bg} ${s.text} text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border border-current opacity-80 hover:opacity-100 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap`}
+                          >
+                            {s.label}
+                            <ChevronDown size={12} />
+                          </button>
+                          
+                          {openStatusDropdown === order.id && (
+                            <div className="absolute top-full mt-2 left-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 min-w-[140px]">
+                              {['pending', 'preparing', 'ready', 'completed'].map((status) => {
+                                const statusStyle = getStatusStyle(status);
+                                return (
+                                  <button
+                                    key={status}
+                                    onClick={() => {
+                                      setOrders(orders.map(o => o.id === order.id ? { ...o, status } : o));
+                                      setOpenStatusDropdown(null);
+                                    }}
+                                    className={`w-full text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${
+                                      order.status === status
+                                        ? `${statusStyle.bg} ${statusStyle.text} bg-opacity-100`
+                                        : 'text-slate-600 hover:bg-slate-50'
+                                    }`}
+                                  >
+                                    {statusStyle.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-8 py-6 text-xs font-bold text-slate-500 italic">
                         {order.orderTime.split(' ')[1]}

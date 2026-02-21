@@ -293,10 +293,10 @@ const MenuManagementPage = () => {
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Item Title</label>
                     <input type="text" value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} className={`w-full px-5 py-4 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500 border transition-all ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} placeholder="Product Name" />
                   </div>
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Price (₹)</label>
                     <input type="number" value={itemForm.price} onChange={(e) => setItemForm({ ...itemForm, price: e.target.value })} className={`w-full px-5 py-4 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500 border transition-all ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} placeholder="0.00" />
-                  </div>
+                  </div> */}
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Description</label>
                     <textarea value={itemForm.description} onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })} rows="3" className={`w-full px-5 py-4 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500 border transition-all resize-none ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} placeholder="Brief menu description..." />
