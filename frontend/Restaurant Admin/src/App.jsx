@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import Login from './Components/Dashboard/Pages/Login'
 import Dashboard from './Components/Dashboard/Pages/Dashboard'
+import MenuItems from './Components/Dashboard/Pages/MenuItems'
+import Settings from './Components/Dashboard/Pages/Settings'
 import Sidebar from './Components/Common/Sidebar'
 import Menu from './Components/UserMenu/Pages/Menu'
 
@@ -32,9 +34,9 @@ const AppRoutes = ({ isLoggedIn, setIsLoggedIn }) => {
 
   // Layout wrapper for authenticated pages with sidebar
   const AuthenticatedLayout = ({ children }) => (
-    <div className="relative h-screen w-screen overflow-hidden">
+    <div className="h-screen w-screen overflow-hidden relative bg-slate-50">
       <Sidebar onLogout={handleLogout} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-      <main className={`absolute inset-0 overflow-auto transition-all duration-300 ease-in-out ${sidebarOpen ? 'left-64' : 'left-20'}`}>
+      <main className={`h-full overflow-auto transition-all duration-300 ease-in-out ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
         {children}
       </main>
     </div>
@@ -75,6 +77,30 @@ const AppRoutes = ({ isLoggedIn, setIsLoggedIn }) => {
           <ProtectedRoute>
             <AuthenticatedLayout>
               <Dashboard onLogout={handleLogout} sidebarOpen={sidebarOpen} />
+            </AuthenticatedLayout>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Menu Items Route */}
+      <Route 
+        path="/admin/menu" 
+        element={
+          <ProtectedRoute>
+            <AuthenticatedLayout>
+              <MenuItems />
+            </AuthenticatedLayout>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Settings Route */}
+      <Route 
+        path="/admin/settings" 
+        element={
+          <ProtectedRoute>
+            <AuthenticatedLayout>
+              <Settings />
             </AuthenticatedLayout>
           </ProtectedRoute>
         } 

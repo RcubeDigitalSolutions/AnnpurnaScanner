@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -15,20 +16,49 @@ import {
 
 export default function Sidebar({ onLogout, sidebarOpen, setSidebarOpen }) {
   const [activeMenu, setActiveMenu] = useState('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Sync activeMenu with current route
+  useEffect(() => {
+    const currentPath = location.pathname;
+    if (currentPath.includes('/admin/menu')) {
+      setActiveMenu('menu');
+    } else if (currentPath.includes('/admin/dashboard')) {
+      setActiveMenu('dashboard');
+    } else if (currentPath.includes('/admin/settings')) {
+      setActiveMenu('settings');
+    } else if (currentPath.includes('/orders')) {
+      setActiveMenu('orders');
+    } else if (currentPath.includes('/customers')) {
+      setActiveMenu('customers');
+    } else if (currentPath.includes('/reservations')) {
+      setActiveMenu('reservations');
+    } else if (currentPath.includes('/analytics')) {
+      setActiveMenu('analytics');
+    }
+  }, [location.pathname]);
 
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', href: '#dashboard' },
-    { id: 'menu', icon: UtensilsCrossed, label: 'Menu Items', href: '#menu' },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', href: '/admin/dashboard' },
+    { id: 'menu', icon: UtensilsCrossed, label: 'Menu Items', href: '/admin/menu' },
     { id: 'orders', icon: ShoppingCart, label: 'Orders', href: '#orders' },
     { id: 'customers', icon: Users, label: 'Customers', href: '#customers' },
     { id: 'reservations', icon: Clock, label: 'Reservations', href: '#reservations' },
     { id: 'analytics', icon: TrendingUp, label: 'Analytics', href: '#analytics' },
-    { id: 'settings', icon: Settings, label: 'Settings', href: '#settings' },
+    { id: 'settings', icon: Settings, label: 'Settings', href: '/admin/settings' },
   ];
 
   const handleLogout = () => {
     if (onLogout) {
       onLogout();
+    }
+  };
+
+  const handleNavigate = (href, id) => {
+    setActiveMenu(id);
+    if (href.startsWith('/')) {
+      navigate(href);
     }
   };
 
@@ -79,11 +109,10 @@ export default function Sidebar({ onLogout, sidebarOpen, setSidebarOpen }) {
         {/* Navigation Menu */}
         <nav className="flex-1 px-4 py-6 space-y-2">
           {menuItems.map((item) => (
-            <a
+            <button
               key={item.id}
-              href={item.href}
-              onClick={() => setActiveMenu(item.id)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group transform ${
+              onClick={() => handleNavigate(item.href, item.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group transform ${
                 activeMenu === item.id
                   ? 'bg-slate-700 shadow-md scale-105 ' + (sidebarOpen ? 'pl-5' : '')
                   : 'hover:scale-105'
@@ -112,7 +141,7 @@ export default function Sidebar({ onLogout, sidebarOpen, setSidebarOpen }) {
                   {item.label}
                 </span>
               )}
-            </a>
+            </button>
           ))}
         </nav>
 
