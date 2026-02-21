@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocat
 import Login from './Components/Dashboard/Pages/Login'
 import Dashboard from './Components/Dashboard/Pages/Dashboard'
 import MenuItems from './Components/Dashboard/Pages/MenuItems'
+import Orders from './Components/Dashboard/Pages/Orders'
+import Feedback from './Components/Dashboard/Pages/Feedback'
 import Settings from './Components/Dashboard/Pages/Settings'
 import Sidebar from './Components/Common/Sidebar'
 import Menu from './Components/UserMenu/Pages/Menu'
@@ -89,6 +91,30 @@ const AppRoutes = ({ isLoggedIn, setIsLoggedIn }) => {
           <ProtectedRoute>
             <AuthenticatedLayout>
               <MenuItems />
+            </AuthenticatedLayout>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Orders Route */}
+      <Route 
+        path="/admin/orders" 
+        element={
+          <ProtectedRoute>
+            <AuthenticatedLayout>
+              <Orders />
+            </AuthenticatedLayout>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Feedback Route */}
+      <Route 
+        path="/admin/feedback" 
+        element={
+          <ProtectedRoute>
+            <AuthenticatedLayout>
+              <Feedback />
             </AuthenticatedLayout>
           </ProtectedRoute>
         } 

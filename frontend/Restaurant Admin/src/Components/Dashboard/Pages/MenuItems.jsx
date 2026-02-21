@@ -37,6 +37,9 @@ const MenuManagementPage = () => {
 
   const [categoryForm, setCategoryForm] = useState({ name: '' });
   const [itemForm, setItemForm] = useState({ name: '', price: '', description: '', available: true });
+  const [sizes, setSizes] = useState([]);
+  const [showSizeForm, setShowSizeForm] = useState(false);
+  const [newSize, setNewSize] = useState({ quantity: '', price: '' });
 
   useEffect(() => {
     if (categories.length > 0 && !selectedCategory) {
@@ -76,9 +79,25 @@ const MenuManagementPage = () => {
       price: parseFloat(itemForm.price),
       description: itemForm.description,
       available: itemForm.available,
+      sizes: sizes
     };
     setItems(editingItem ? items.map(i => i.id === editingItem.id ? newItem : i) : [...items, newItem]);
     setShowItemModal(false);
+    setSizes([]);
+    setShowSizeForm(false);
+    setNewSize({ quantity: '', price: '' });
+  };
+
+  const addSize = () => {
+    if (newSize.quantity.trim() && newSize.price.trim()) {
+      setSizes([...sizes, { id: Date.now().toString(), quantity: newSize.quantity, price: newSize.price }]);
+      setNewSize({ quantity: '', price: '' });
+      setShowSizeForm(false);
+    }
+  };
+
+  const removeSize = (sizeId) => {
+    setSizes(sizes.filter(s => s.id !== sizeId));
   };
 
   return (
@@ -111,7 +130,7 @@ const MenuManagementPage = () => {
         <h1 className="text-5xl font-black text-slate-900  tracking-tighter mb-3">Menu Management</h1>
         <div className="flex flex-col gap-2">
           <p className="text-slate-500 font-bold text-sm">Organize, manage and control your restaurant menu items</p>
-          <div className="h-1 w-80 bg-gradient-to-r from-orange-600 to-orange-400 rounded-full"></div>
+          <div className="h-1 w-97 bg-gradient-to-r from-orange-600 to-orange-400 rounded-full"></div>
         </div>
       </div>
 
@@ -172,7 +191,7 @@ const MenuManagementPage = () => {
                   </div>
                 </div>
                 <button 
-                  onClick={() => { setEditingItem(null); setItemForm({ name: '', price: '', description: '', available: true }); setShowItemModal(true); }}
+                  onClick={() => { setEditingItem(null); setItemForm({ name: '', price: '', description: '', available: true }); setSizes([]); setShowSizeForm(false); setNewSize({ quantity: '', price: '' }); setShowItemModal(true); }}
                   className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-orange-600/20 flex items-center gap-2 transition-all"
                 >
                   <Plus size={18} /> Add New Item
@@ -182,13 +201,13 @@ const MenuManagementPage = () => {
               {/* Items Grid */}
               <div className="flex-1 overflow-y-auto pr-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-10 custom-scrollbar">
                 {filteredItems.map((item) => (
-                  <div key={item.id} className={`${theme.card} border rounded-[32px] p-6 shadow-sm hover:shadow-xl hover:border-orange-500/30 transition-all duration-300 group h-fit`}>
+                  <div key={item.id} className={`${theme.card} border rounded-[32px] p-6 shadow-sm hover:shadow-xl hover:border-orange-500/30 transition-all duration-300 group min-h-96 flex flex-col`}>
                     <div className="flex justify-between items-start mb-4">
                       <div className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg text-xs font-black text-orange-600">
                         ₹{item.price.toFixed(2)}
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => { setEditingItem(item); setItemForm({ name: item.name, price: item.price.toString(), description: item.description, available: item.available }); setShowItemModal(true); }} 
+                        <button onClick={() => { setEditingItem(item); setItemForm({ name: item.name, price: item.price.toString(), description: item.description, available: item.available }); setSizes(item.sizes || []); setShowItemModal(true); }} 
                                 className="p-2 text-slate-400 hover:text-orange-600 transition-colors">
                           <Edit2 size={16} />
                         </button>
@@ -202,7 +221,22 @@ const MenuManagementPage = () => {
                     <h3 className={`text-lg font-black leading-tight mb-2 ${theme.textMain}`}>{item.name}</h3>
                     <p className="text-xs font-medium text-slate-500 leading-relaxed mb-6 line-clamp-2">{item.description}</p>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-slate-800">
+                    {/* Size Variants Display */}
+                    {item.sizes && item.sizes.length > 0 && (
+                      <div className="mb-6 space-y-2 pb-6 border-b border-slate-50 dark:border-slate-800">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Available Sizes</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {item.sizes.map((size) => (
+                            <div key={size.id} className={`p-2 rounded-lg border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                              <p className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{size.quantity}</p>
+                              <p className="text-xs font-black text-orange-600">₹{size.price}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-slate-800 mt-auto">
                       <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full ${item.available ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{item.available ? 'Available' : 'Out of Stock'}</span>
@@ -270,6 +304,81 @@ const MenuManagementPage = () => {
                   <div className="flex items-center gap-3 ml-1">
                     <input type="checkbox" checked={itemForm.available} onChange={(e) => setItemForm({ ...itemForm, available: e.target.checked })} className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500" />
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Active on Menu</label>
+                  </div>
+
+                  {/* Size Management Section */}
+                  <div className="space-y-4 border-t border-slate-200 dark:border-slate-700 pt-6">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Size Variants</label>
+                      <button 
+                        onClick={() => setShowSizeForm(!showSizeForm)}
+                        className="bg-orange-600 hover:bg-orange-700 text-white p-2 rounded-lg transition-all flex items-center gap-1"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+
+                    {/* New Size Form */}
+                    {showSizeForm && (
+                      <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl space-y-3 border border-slate-200 dark:border-slate-700">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Quantity</label>
+                            <input 
+                              type="text" 
+                              value={newSize.quantity} 
+                              onChange={(e) => setNewSize({ ...newSize, quantity: e.target.value })} 
+                              placeholder="e.g. 500g, Small" 
+                              className={`w-full px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border transition-all text-sm ${darkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300'}`}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Price (₹)</label>
+                            <input 
+                              type="number" 
+                              value={newSize.price} 
+                              onChange={(e) => setNewSize({ ...newSize, price: e.target.value })} 
+                              placeholder="0.00" 
+                              className={`w-full px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border transition-all text-sm ${darkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300'}`}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => { setShowSizeForm(false); setNewSize({ quantity: '', price: '' }); }}
+                            className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-widest border transition-all ${darkMode ? 'border-slate-700 text-slate-400' : 'border-slate-300 text-slate-600'}`}
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            onClick={addSize}
+                            className="flex-1 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
+                          >
+                            Add Size
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Added Sizes List */}
+                    <div className="space-y-2">
+                      {sizes.map((size) => (
+                        <div key={size.id} className={`flex items-center justify-between p-3 rounded-lg border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <p className="text-xs font-bold text-slate-900 dark:text-white">{size.quantity}</p>
+                              <p className="text-[10px] font-bold text-orange-600">₹{size.price}</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => removeSize(size.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}

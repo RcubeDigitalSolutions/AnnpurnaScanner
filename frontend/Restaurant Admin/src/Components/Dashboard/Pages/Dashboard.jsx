@@ -164,7 +164,7 @@ const Dashboard = () => {
            
           </div>
           <p className="text-slate-500 font-bold text-sm">Real-time restaurant operations & analytics</p>
-          <div className="mt-4 h-1 w-32 bg-gradient-to-r from-orange-600 to-orange-400 rounded-full"></div>
+          <div className="mt-4 h-1 w-69 bg-gradient-to-r from-orange-600 to-orange-400 rounded-full"></div>
         </div>
 
         {/* Real-time Load Indicator */}
@@ -188,7 +188,7 @@ const Dashboard = () => {
         {/* Main KPIs Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-5">
           <KPICard icon={ShoppingCart} label="Daily Orders" value={stats.totalOrders} change={12} />
-          <KPICard icon={DollarSign} label="Gross Revenue" value={stats.todayRevenue} unit="₹" change={8} />
+          <KPICard icon={DollarSign} label="Revenue" value={stats.todayRevenue} unit="₹" change={8} />
           <KPICard icon={Users} label="Total Customers" value="284" change={15} />
           <KPICard icon={Flame} label="Active Orders" value={stats.activeOrders} change={3} />
         </div>
@@ -232,13 +232,13 @@ const Dashboard = () => {
             <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
                   <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Live Order Stream</h2>
-                  <button className="text-[10px] font-black text-orange-600 uppercase border-b-2 border-orange-600">Full Queue</button>
+                  <button className="text-[10px] font-black text-orange-600 uppercase border-b-2 border-orange-600">View Details</button>
                </div>
                <table className="w-full">
                   <thead className="bg-slate-50/50">
                     <tr>
-                      <th className="text-left py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">ID</th>
-                      <th className="text-left py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Guest</th>
+                      <th className="text-left py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Order ID</th>
+                      <th className="text-left py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer Name</th>
                       <th className="text-left py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Table</th>
                       <th className="text-left py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</th>
                       <th className="text-left py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>

@@ -130,7 +130,7 @@ const Settings = () => {
           <div className="flex items-center gap-3 mt-3">
             <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Restaurant Configuration & Dashboard Control</p>
           </div>
-          <div className="h-1.5 w-32 mt-5 bg-gradient-to-r from-orange-500 to-orange-400 rounded-full"></div>
+          <div className="h-1.5 w-100 mt-5 bg-gradient-to-r from-orange-500 to-orange-400 rounded-full"></div>
         </div>
 
         <div className="flex items-center gap-4 ml-8">
