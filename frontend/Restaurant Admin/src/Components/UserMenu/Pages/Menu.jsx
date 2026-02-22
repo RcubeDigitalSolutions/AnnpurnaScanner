@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Search, ChevronDown, ChevronUp, Home as HomeIcon, UtensilsCrossed, ClipboardList, Receipt, Users } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { Search, ChevronDown, ChevronUp, Home as HomeIcon, UtensilsCrossed, ClipboardList, Receipt, Users, X } from 'lucide-react'
 import Order from './Order'
 
 const Menu = () => {
@@ -12,6 +12,8 @@ const Menu = () => {
   const [activeNav, setActiveNav] = useState('menu')
   const [showCategoryTabs, setShowCategoryTabs] = useState(true)
   const [selectedExtras, setSelectedExtras] = useState({})
+  const [showMiniCart, setShowMiniCart] = useState(true)
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false)
 
   // Sample menu data - Replace with API call later
   const menuItems = [
@@ -204,8 +206,15 @@ const Menu = () => {
     return words.slice(0, wordLimit).join(' ') + '...'
   }
 
+  useEffect(() => {
+    if (cart.length > 0) {
+      setShowMiniCart(true)
+      setShowRemoveConfirm(false)
+    }
+  }, [cart.length])
+
   return (
-    <div className="min-h-screen bg-gray-100 pb-20">
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white shadow-sm">
         {/* Restaurant Info */}
@@ -314,7 +323,7 @@ const Menu = () => {
       </header>
 
       {/* Menu Items */}
-      <main className="bg-white px-4">
+      <main className={`bg-white px-4 ${cart.length > 0 && showMiniCart ? 'pb-28' : 'pb-6'}`}>
         {filteredItems.map(item => (
           <div key={item.id} className="border-b border-gray-200 py-4">
             <div className="flex gap-3">
@@ -355,11 +364,16 @@ const Menu = () => {
                   </p>
                 </div>
 
-                {/* Add Button or Quantity Controls */}
+                
+               
+              </div>
+
+              {/* Right-side Add/Quantity Controls */}
+              <div className="flex w-24 flex-shrink-0 items-start justify-end">
                 {getItemQuantity(item.id) === 0 ? (
                   <button
                     onClick={() => addToCart(item)}
-                    className="rounded-lg border-2 border-orange-600 px-6 py-1.5 text-sm font-semibold text-orange-600 transition hover:bg-orange-50"
+                    className="rounded-xl bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white shadow-lg transition hover:bg-orange-500"
                   >
                     + Add
                   </button>
@@ -383,22 +397,6 @@ const Menu = () => {
                   </div>
                 )}
               </div>
-
-              {/* Item Image */}
-              <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg">
-                <img 
-                  src={item.image} 
-                  alt={item.name}
-                  className="h-full w-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                <div className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-lg">
-                  <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <circle cx="12" cy="12" r="10" strokeWidth="2"/>
-                    <circle cx="12" cy="12" r="3" fill="currentColor"/>
-                  </svg>
-                </div>
-              </div>
             </div>
           </div>
         ))}
@@ -411,7 +409,7 @@ const Menu = () => {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white">
+      {/* <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white">
         <div className="flex items-center justify-around px-2 py-2">
           <button 
             onClick={() => setActiveNav('home')}
@@ -461,7 +459,49 @@ const Menu = () => {
             <span className="text-xs font-medium">Pay Bill</span>
           </button>
         </div>
-      </nav>
+      </nav> */}
+
+      {cart.length > 0 && showMiniCart && (
+        <div className="fixed bottom-4 left-4 right-4 z-40">
+          <div className="flex items-center justify-between gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-3 py-3 shadow-lg">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-orange-700">
+                {cart.reduce((sum, item) => sum + item.quantity, 0)} Items · ₹ {getTotalAmount().toFixed(2)}
+              </p>
+            </div>
+            <div className="flex flex-shrink-0 items-center gap-2">
+              <button
+                onClick={() => setShowCartModal(true)}
+                className="rounded-xl bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-orange-500"
+              >
+                View Cart
+              </button>
+              {showRemoveConfirm ? (
+                <button
+                  onClick={() => {
+                    setCart([])
+                    setItemNotes({})
+                    setSelectedExtras({})
+                    setShowMiniCart(false)
+                    setShowRemoveConfirm(false)
+                  }}
+                  className="rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 shadow-md transition hover:bg-red-50"
+                >
+                  Remove
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowRemoveConfirm(true)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-orange-600 shadow-md transition hover:bg-orange-100"
+                  aria-label="Dismiss cart summary"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Order
         cart={cart}
