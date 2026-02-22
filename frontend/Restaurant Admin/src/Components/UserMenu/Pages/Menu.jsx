@@ -10,7 +10,7 @@ const Menu = () => {
   const [expandedItems, setExpandedItems] = useState({})
   const [itemNotes, setItemNotes] = useState({})
   const [activeNav, setActiveNav] = useState('menu')
-  const [showCategoryTabs, setShowCategoryTabs] = useState(true)
+  const [showMenuItems, setShowMenuItems] = useState(true)
   const [selectedExtras, setSelectedExtras] = useState({})
   const [showMiniCart, setShowMiniCart] = useState(true)
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false)
@@ -262,58 +262,56 @@ const Menu = () => {
         </div>
 
         {/* Category Tabs */}
-        {showCategoryTabs && (
-          <div className="overflow-x-auto px-4 py-3">
-            <div className="flex gap-3">
-              {categories.map((category, index) => (
-                <button
-                  key={category.name}
-                  onClick={() => setSelectedCategory(category.name)}
-                  className="relative flex-shrink-0"
-                >
-                  <div className={`relative h-16 w-16 overflow-hidden rounded-xl border-2 ${
-                    selectedCategory === category.name
-                      ? 'border-orange-500'
-                      : 'border-gray-200'
-                  }`}>
-                    {index === 0 ? (
-                      <div className="flex h-full w-full items-center justify-center bg-gray-100">
-                        <UtensilsCrossed className="h-8 w-8 text-orange-500" />
-                      </div>
-                    ) : (
-                      <img 
-                        src={category.image} 
-                        alt={category.name}
-                        className="h-full w-full object-cover"
-                      />
-                    )}
-                    {selectedCategory === category.name && (
-                      <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500">
-                        <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <p className="mt-1 text-xs font-medium text-orange-600">
-                    {category.name.split(' ')[0]}
-                  </p>
-                </button>
-              ))}
-            </div>
+        <div className="overflow-x-auto px-4 py-3">
+          <div className="flex gap-3">
+            {categories.map((category, index) => (
+              <button
+                key={category.name}
+                onClick={() => setSelectedCategory(category.name)}
+                className="relative flex-shrink-0"
+              >
+                <div className={`relative h-16 w-16 overflow-hidden rounded-xl border-2 ${
+                  selectedCategory === category.name
+                    ? 'border-orange-500'
+                    : 'border-gray-200'
+                }`}>
+                  {index === 0 ? (
+                    <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                      <UtensilsCrossed className="h-8 w-8 text-orange-500" />
+                    </div>
+                  ) : (
+                    <img 
+                      src={category.image} 
+                      alt={category.name}
+                      className="h-full w-full object-cover"
+                    />
+                  )}
+                  {selectedCategory === category.name && (
+                    <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500">
+                      <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <p className="mt-1 text-xs font-medium text-orange-600">
+                  {category.name.split(' ')[0]}
+                </p>
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
-        {/* Category Title */}
+        {/* Menu Items Title */}
         <div className="border-b border-gray-200 bg-white px-4 py-3">
           <button
-            onClick={() => setShowCategoryTabs((prev) => !prev)}
+            onClick={() => setShowMenuItems((prev) => !prev)}
             className="flex w-full items-center justify-between"
           >
             <h2 className="text-base font-bold text-gray-900">
               {selectedCategory} ({filteredItems.length})
             </h2>
-            {showCategoryTabs ? (
+            {showMenuItems ? (
               <ChevronUp className="h-5 w-5 text-gray-600" />
             ) : (
               <ChevronDown className="h-5 w-5 text-gray-600" />
@@ -323,90 +321,89 @@ const Menu = () => {
       </header>
 
       {/* Menu Items */}
-      <main className={`bg-white px-4 ${cart.length > 0 && showMiniCart ? 'pb-28' : 'pb-6'}`}>
-        {filteredItems.map(item => (
-          <div key={item.id} className="border-b border-gray-200 py-4">
-            <div className="flex gap-3">
-              {/* Veg/Non-veg Indicator */}
-              <div className="flex-shrink-0">
-                <div className={`flex h-5 w-5 items-center justify-center rounded border-2 ${
-                  item.veg 
-                    ? 'border-green-600' 
-                    : 'border-red-600'
-                }`}>
-                  <div className={`h-2.5 w-2.5 rounded-full ${
+      {showMenuItems && (
+        <main className={`bg-white px-4 ${cart.length > 0 && showMiniCart ? 'pb-28' : 'pb-6'}`}>
+          {filteredItems.map(item => (
+            <div key={item.id} className="border-b border-gray-200 py-4">
+              <div className="flex gap-3">
+                {/* Veg/Non-veg Indicator */}
+                <div className="flex-shrink-0">
+                  <div className={`flex h-5 w-5 items-center justify-center rounded border-2 ${
                     item.veg 
-                      ? 'bg-green-600' 
-                      : 'bg-red-600'
-                  }`}></div>
-                </div>
-              </div>
-
-              <div className="flex-1">
-                {/* Item Name and Price */}
-                <div className="mb-1">
-                  <h3 className="text-base font-semibold text-gray-900">{item.name}</h3>
-                  <p className="mt-0.5 text-base font-semibold text-gray-900">₹ {item.price}.00</p>
+                      ? 'border-green-600' 
+                      : 'border-red-600'
+                  }`}>
+                    <div className={`h-2.5 w-2.5 rounded-full ${
+                      item.veg 
+                        ? 'bg-green-600' 
+                        : 'bg-red-600'
+                    }`}></div>
+                  </div>
                 </div>
 
-                {/* Description */}
-                <div className="mb-2">
-                  <p className="text-sm text-gray-500">
-                    {expandedItems[item.id] ? item.description : truncateText(item.description)}
-                    {item.description.split(' ').length > 8 && (
-                      <button
-                        onClick={() => toggleReadMore(item.id)}
-                        className="ml-1 font-medium text-orange-600"
-                      >
-                        {expandedItems[item.id] ? 'Read Less' : 'Read More'}
-                      </button>
-                    )}
-                  </p>
+                <div className="flex-1">
+                  {/* Item Name and Price */}
+                  <div className="mb-1">
+                    <h3 className="text-base font-semibold text-gray-900">{item.name}</h3>
+                    <p className="mt-0.5 text-base font-semibold text-gray-900">₹ {item.price}.00</p>
+                  </div>
+
+                  {/* Description */}
+                  <div className="mb-2">
+                    <p className="text-sm text-gray-500">
+                      {expandedItems[item.id] ? item.description : truncateText(item.description)}
+                      {item.description.split(' ').length > 8 && (
+                        <button
+                          onClick={() => toggleReadMore(item.id)}
+                          className="ml-1 font-medium text-orange-600"
+                        >
+                          {expandedItems[item.id] ? 'Read Less' : 'Read More'}
+                        </button>
+                      )}
+                    </p>
+                  </div>
                 </div>
 
-                
-               
-              </div>
-
-              {/* Right-side Add/Quantity Controls */}
-              <div className="flex w-24 flex-shrink-0 items-start justify-end">
-                {getItemQuantity(item.id) === 0 ? (
-                  <button
-                    onClick={() => addToCart(item)}
-                    className="rounded-xl bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white shadow-lg transition hover:bg-orange-500"
-                  >
-                    + Add
-                  </button>
-                ) : (
-                  <div className="inline-flex items-center gap-3 rounded-lg border-2 border-orange-600 px-3 py-1">
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-lg font-bold text-orange-600"
-                    >
-                      −
-                    </button>
-                    <span className="min-w-[20px] text-center text-sm font-semibold text-orange-600">
-                      {getItemQuantity(item.id)}
-                    </span>
+                {/* Right-side Add/Quantity Controls */}
+                <div className="flex w-24 flex-shrink-0 items-start justify-end">
+                  {getItemQuantity(item.id) === 0 ? (
                     <button
                       onClick={() => addToCart(item)}
-                      className="text-lg font-bold text-orange-600"
+                      className="rounded-xl bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white shadow-lg transition hover:bg-orange-500"
                     >
-                      +
+                      + Add
                     </button>
-                  </div>
-                )}
+                  ) : (
+                    <div className="inline-flex items-center gap-3 rounded-lg border-2 border-orange-600 px-3 py-1">
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-lg font-bold text-orange-600"
+                      >
+                        −
+                      </button>
+                      <span className="min-w-[20px] text-center text-sm font-semibold text-orange-600">
+                        {getItemQuantity(item.id)}
+                      </span>
+                      <button
+                        onClick={() => addToCart(item)}
+                        className="text-lg font-bold text-orange-600"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        {filteredItems.length === 0 && (
-          <div className="py-12 text-center">
-            <p className="text-base text-gray-500">No items found</p>
-          </div>
-        )}
-      </main>
+          {filteredItems.length === 0 && (
+            <div className="py-12 text-center">
+              <p className="text-base text-gray-500">No items found</p>
+            </div>
+          )}
+        </main>
+      )}
 
       {/* Bottom Navigation */}
       {/* <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white">
