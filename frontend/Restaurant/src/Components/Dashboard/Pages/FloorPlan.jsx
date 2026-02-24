@@ -1,30 +1,35 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, CheckCircle, Users, Download } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Users, Download } from 'lucide-react';
 
 const FloorPlanPage = () => {
   const [editMode, setEditMode] = useState(false);
   const [savedNotification, setSavedNotification] = useState(false);
 
   const [tables, setTables] = useState([
-    { id: 1, name: 'Table 1', capacity: 4, status: 'active' },
-    { id: 2, name: 'Table 2', capacity: 6, status: 'active' },
-    { id: 3, name: 'Table 3', capacity: 2, status: 'active' },
-    { id: 4, name: 'Table 4', capacity: 8, status: 'active' },
+    { id: 1, name: 'Table 1', capacity: 4, status: 'active', qrGenerated: true },
+    { id: 2, name: 'Table 2', capacity: 6, status: 'active', qrGenerated: true },
+    { id: 3, name: 'Table 3', capacity: 2, status: 'active', qrGenerated: true },
+    { id: 4, name: 'Table 4', capacity: 8, status: 'active', qrGenerated: true },
   ]);
 
   const [editingTableId, setEditingTableId] = useState(null);
-  const [newTable, setNewTable] = useState({ name: '', capacity: '' });
+  const [newTable, setNewTable] = useState({ capacity: '' });
   const [isAddingTable, setIsAddingTable] = useState(false);
+  const [generateQrOnCreate, setGenerateQrOnCreate] = useState(true);
+  const nextTableNumber = Math.max(...tables.map(t => t.id), 0) + 1;
+  const nextTableLabel = `Table ${nextTableNumber}`;
 
-  const addTable = () => {
-    if (newTable.name && newTable.capacity) {
-      const newId = Math.max(...tables.map(t => t.id), 0) + 1;
-      setTables([...tables, { id: newId, ...newTable, status: 'active', capacity: parseInt(newTable.capacity) }]);
-      setNewTable({ name: '', capacity: '' });
-      setIsAddingTable(false);
-      setSavedNotification(true);
-      setTimeout(() => setSavedNotification(false), 3000);
-    }
+  const addTable = (generateQr = true) => {
+    const newId = Math.max(...tables.map(t => t.id), 0) + 1;
+    const parsedCapacity = Number.parseInt(newTable.capacity, 10);
+    const capacity = Number.isFinite(parsedCapacity) && parsedCapacity > 0 ? parsedCapacity : 4;
+
+    setTables([...tables, { id: newId, name: `Table ${newId}`, status: 'active', capacity, qrGenerated: generateQr }]);
+    setNewTable({ capacity: '' });
+    setGenerateQrOnCreate(true);
+    setIsAddingTable(false);
+    setSavedNotification(true);
+    setTimeout(() => setSavedNotification(false), 3000);
   };
 
   const updateTable = (id, updatedData) => {
@@ -109,36 +114,53 @@ const FloorPlanPage = () => {
         <div className="p-6 flex-1 overflow-y-auto">
           {isAddingTable && (
             <div className="bg-white p-6 rounded-2xl border-2 border-dashed border-orange-200 mb-6 animate-in zoom-in-95 duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <InputField label="Table Name *" value={newTable.name} onChange={(e) => setNewTable({...newTable, name: e.target.value})} placeholder="e.g. Table 5" />
-                <InputField label="Max Guests *" type="number" value={newTable.capacity} onChange={(e) => setNewTable({...newTable, capacity: e.target.value})} placeholder="4" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-700 block">Table Number</label>
+                  <div className="w-full px-4 py-3.5 border border-emerald-100 rounded-xl bg-emerald-50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-black uppercase tracking-widest text-emerald-700">Auto Assigned</span>
+                      <span className="inline-flex items-center px-3 py-1 rounded-lg bg-white border border-emerald-200 text-sm font-black text-emerald-700">
+                        #{nextTableNumber}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {/* <InputField label="Seats *" type="number" value={newTable.capacity} onChange={(e) => setNewTable({...newTable, capacity: e.target.value})} placeholder="4" /> */}
               </div>
-              <div className="flex gap-3">
+              <div className="mb-6 p-4 rounded-xl border border-[#eee6e3] bg-[#faf8f7]">
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-600 mb-1">{nextTableLabel} ke liye QR code chahiye?</p>
+                <p className="text-[11px] font-medium text-slate-500 mb-3">Generate par click karte hi is table ka QR card me show ho jayega.</p>
+               
+                 <div className="flex flex-wrap gap-3">
                 <button 
-                  onClick={addTable} 
-                  className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all"
+                  onClick={() => addTable(generateQrOnCreate)} 
+                  className="bg-linear-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-[0_8px_20px_rgba(5,150,105,0.25)] hover:shadow-[0_10px_24px_rgba(5,150,105,0.35)]"
                 >
-                  Create Table
+                  {generateQrOnCreate ? 'Yes, Generate QR & Create Table' : 'Create Table'}
                 </button>
                 <button 
-                  onClick={() => { setIsAddingTable(false); setNewTable({ name: '', capacity: '' }); }} 
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all"
+                  onClick={() => { setIsAddingTable(false); setNewTable({ capacity: '' }); setGenerateQrOnCreate(true); }} 
+                  className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
                 >
                   Cancel
                 </button>
               </div>
+              </div>
+             
             </div>
           )}
 
           {/* Tables Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {tables.map((table) => (
-              <div key={table.id} className="bg-white rounded-2xl border border-[#e6dfdc] p-4 hover:shadow-lg transition-all group">
+              <div key={table.id} className="relative bg-white rounded-2xl border border-[#e6dfdc] p-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 group overflow-hidden">
+                <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-orange-500 via-orange-400 to-orange-300"></div>
                 {editingTableId === table.id ? (
                   <>
-                    <div className="space-y-4 mb-4">
+                    <div className="space-y-4 mb-4 mt-2">
                       <InputField label="Table Name" value={newTable.name} onChange={(e) => setNewTable({...newTable, name: e.target.value})} />
-                      <InputField label="Max Guests" type="number" value={newTable.capacity} onChange={(e) => setNewTable({...newTable, capacity: e.target.value})} />
+                      {/* <InputField label="Seats" type="number" value={newTable.capacity} onChange={(e) => setNewTable({...newTable, capacity: e.target.value})} /> */}
                     </div>
                     <div className="flex gap-2">
                       <button 
@@ -157,48 +179,57 @@ const FloorPlanPage = () => {
                   </>
                 ) : (
                   <>
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="text-lg font-black text-slate-900">{table.name}</h4>
+                    <div className="flex justify-between items-start mb-4 mt-2 gap-3">
+                      <div className="min-w-0">
+                        <h4 className="text-lg font-black text-slate-900 truncate">{table.name}</h4>
                       </div>
-                      <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${table.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                        {table.status}
-                      </div>
-                    </div>
-
-                    <div className="mb-4 border border-[#eee6e3] rounded-lg p-3 bg-[#faf8f7]">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Table QR</span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${table.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                          {table.status}
+                        </div>
                         <button
-                          onClick={() => downloadTableQr(table)}
-                          className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-orange-600 hover:text-orange-700"
+                          onClick={() => setTables(tables.filter(t => t.id !== table.id))}
+                          className="w-8 h-8 inline-flex items-center justify-center border border-rose-100 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                          aria-label={`Delete ${table.name}`}
+                          title="Delete table"
                         >
-                          <Download size={12} /> Download QR
+                          <Trash2 size={15}/>
                         </button>
                       </div>
-                      <div className="flex justify-center">
-                        <img
-                          src={getTableQrUrl(table)}
-                          alt={`${table.name} QR code`}
-                          className="w-28 h-28 rounded-md border border-[#e6dfdc] bg-white"
-                        />
-                      </div>
                     </div>
 
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => { setEditingTableId(table.id); setNewTable({name: table.name, capacity: table.capacity.toString()}); }}
-                        className="flex-1 bg-slate-900 hover:bg-orange-600 text-white py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all inline-flex items-center justify-center gap-1"
-                      >
-                        <Edit2 size={12} /> Edit
-                      </button>
-                      <button 
-                        onClick={() => setTables(tables.filter(t => t.id !== table.id))} 
-                        className="px-3 py-2 border border-[#e6dfdc] rounded-lg text-rose-500 hover:bg-rose-50 transition-all"
-                      >
-                        <Trash2 size={16}/>
-                      </button>
-                    </div>
+                    {table.qrGenerated ? (
+                      <div className="mb-1 border border-[#eee6e3] rounded-xl p-3.5 bg-[#faf8f7]">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Table QR</span>
+                          <button
+                            onClick={() => downloadTableQr(table)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-orange-50 text-[10px] font-black uppercase tracking-widest text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-all"
+                          >
+                            <Download size={12} /> Download QR
+                          </button>
+                        </div>
+                        <div className="flex justify-center">
+                          <img
+                            src={getTableQrUrl(table)}
+                            alt={`${table.name} QR code`}
+                            className="w-28 h-28 rounded-lg border border-[#e6dfdc] bg-white"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mb-1 border border-dashed border-[#e6dfdc] rounded-xl p-3.5 bg-[#faf8f7]">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[11px] font-semibold text-slate-500">QR not generated yet</span>
+                          <button
+                            onClick={() => updateTable(table.id, { qrGenerated: true })}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 text-[10px] font-black uppercase tracking-widest text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-all"
+                          >
+                            Generate QR
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

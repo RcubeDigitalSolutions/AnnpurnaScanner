@@ -86,35 +86,37 @@ const OrderDetailsPanel = ({ isOpen, order, onClose, onUpdateStatus }) => {
                   </div>
                 </div>
 
-                <div className="flex gap-3">
-                  <UtensilsCrossed size={16} className="text-emerald-600 mt-0.5 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-slate-500">Dish Ordered</p>
-                    <p className="text-[13px] font-black text-slate-900">{order.dish}</p>
+                <div className="rounded-xl border border-[#eee6e3] bg-[#fffaf8] p-3">
+                  <div className="mb-3 flex items-center gap-2">
+                    <UtensilsCrossed size={16} className="text-emerald-600" />
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-600">Ordered Items</p>
                   </div>
-                </div>
 
-                {/* <div className="flex gap-3">
-                  <UtensilsCrossed size={16} className="text-purple-600 mt-0.5 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-slate-500">Category</p>
-                    <p className="text-[13px] font-black text-slate-900">{order.category || 'N/A'}</p>
-                  </div>
-                </div> */}
-
-                <div className="flex gap-3">
-                  <UtensilsCrossed size={16} className="text-indigo-600 mt-0.5 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-slate-500">Variant Size</p>
-                    <p className="text-[13px] font-black text-slate-900">{order.size || 'N/A'}</p>
+                  <div className="space-y-2">
+                    {(order.items || []).map((item, index) => (
+                      <div key={`${item.name}-${index}`} className="rounded-lg border border-[#eee6e3] bg-white px-3 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-[12px] font-black text-slate-900">{item.name}</p>
+                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-black uppercase text-slate-600">
+                            {item.size || 'Regular'}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between text-[10px] font-bold text-slate-500">
+                          <span>Qty</span>
+                          <span className="text-orange-600">{item.qty}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 <div className="border-t border-[#eee6e3] pt-3 mt-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg bg-[#f8f5f3] px-3 py-2">
-                      <p className="text-[10px] font-semibold text-slate-500">Quantity</p>
-                      <p className="text-[16px] font-black text-orange-600">{order.qty}</p>
+                      <p className="text-[10px] font-semibold text-slate-500">Total Quantity</p>
+                      <p className="text-[16px] font-black text-orange-600">
+                        {(order.items || []).reduce((sum, item) => sum + (item.qty || 0), 0)}
+                      </p>
                     </div>
                     <div className="rounded-lg bg-[#f8f5f3] px-3 py-2">
                       <p className="text-[10px] font-semibold text-slate-500">Status</p>

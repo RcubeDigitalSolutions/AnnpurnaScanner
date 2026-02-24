@@ -4,6 +4,15 @@ import {
   X, CheckCircle2, AlertCircle
 } from 'lucide-react';
 
+const getAutoCategoryImage = (name = '') => `https://loremflickr.com/160/160/${encodeURIComponent(name || 'food')},food`;
+const escapeSvgText = (value = '') => value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+const getFallbackCategoryImage = (name = 'Food') => {
+  const title = escapeSvgText((name || 'Food').slice(0, 16));
+  const initial = escapeSvgText((name || 'F').charAt(0).toUpperCase());
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f97316"/><stop offset="100%" stop-color="#fb923c"/></linearGradient></defs><rect width="160" height="160" rx="20" fill="url(#g)"/><circle cx="80" cy="62" r="28" fill="#fff" fill-opacity="0.2"/><text x="80" y="73" text-anchor="middle" font-size="30" font-family="Arial, sans-serif" fill="#ffffff" font-weight="700">${initial}</text><text x="80" y="124" text-anchor="middle" font-size="14" font-family="Arial, sans-serif" fill="#ffffff" font-weight="700">${title}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
 const MenuManagementPage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -13,34 +22,34 @@ const MenuManagementPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [categories, setCategories] = useState([
-    { id: '1', name: 'Appetizers', itemCount: 3 },
-    { id: '2', name: 'Main Course', itemCount: 4 },
-    { id: '3', name: 'Desserts', itemCount: 3 },
-    { id: '4', name: 'Beverages', itemCount: 3 },
+    { id: '1', name: 'Appetizers', itemCount: 3, image: '' },
+    { id: '2', name: 'Main Course', itemCount: 4, image: '' },
+    { id: '3', name: 'Desserts', itemCount: 3, image: '' },
+    { id: '4', name: 'Beverages', itemCount: 3, image: '' },
   ]);
 
   const [items, setItems] = useState([
-    { id: '101', categoryId: '1', name: 'Garlic Bread', price: 6.99, description: 'Crispy baguette with garlic butter', available: true },
-    { id: '102', categoryId: '1', name: 'Chicken Wings', price: 12.99, description: 'Spicy buffalo or BBQ', available: true },
-    { id: '103', categoryId: '1', name: 'Bruschetta', price: 8.99, description: 'Tomato, basil, balsamic', available: false },
-    { id: '201', categoryId: '2', name: 'Classic Burger', price: 15.99, description: 'Beef patty, lettuce, tomato, fries', available: true },
-    { id: '202', categoryId: '2', name: 'Margherita Pizza', price: 14.99, description: 'Tomato, mozzarella, basil', available: true },
-    { id: '203', categoryId: '2', name: 'Grilled Salmon', price: 22.99, description: 'With lemon butter sauce', available: true },
-    { id: '204', categoryId: '2', name: 'Pasta Carbonara', price: 16.99, description: 'Creamy bacon & egg', available: true },
-    { id: '301', categoryId: '3', name: 'Lemon Tart', price: 7.99, description: 'Zesty lemon curd', available: true },
-    { id: '302', categoryId: '3', name: 'Chocolate Lava Cake', price: 8.99, description: 'Warm chocolate center', available: true },
-    { id: '303', categoryId: '3', name: 'Tiramisu', price: 7.99, description: 'Classic Italian dessert', available: false },
-    { id: '401', categoryId: '4', name: 'Soft Drinks', price: 2.99, description: 'Coke, Sprite, Fanta', available: true },
-    { id: '402', categoryId: '4', name: 'Craft Beer', price: 5.99, description: 'Local IPA', available: true },
-    { id: '403', categoryId: '4', name: 'House Wine', price: 7.99, description: 'Red or white', available: true },
+    { id: '101', categoryId: '1', name: 'Garlic Bread', price: 6.99, description: 'Crispy baguette with garlic butter', available: true, foodType: 'veg' },
+    { id: '102', categoryId: '1', name: 'Chicken Wings', price: 12.99, description: 'Spicy buffalo or BBQ', available: true, foodType: 'nonveg' },
+    { id: '103', categoryId: '1', name: 'Bruschetta', price: 8.99, description: 'Tomato, basil, balsamic', available: false, foodType: 'veg' },
+    { id: '201', categoryId: '2', name: 'Classic Burger', price: 15.99, description: 'Beef patty, lettuce, tomato, fries', available: true, foodType: 'nonveg' },
+    { id: '202', categoryId: '2', name: 'Margherita Pizza', price: 14.99, description: 'Tomato, mozzarella, basil', available: true, foodType: 'veg' },
+    { id: '203', categoryId: '2', name: 'Grilled Salmon', price: 22.99, description: 'With lemon butter sauce', available: true, foodType: 'nonveg' },
+    { id: '204', categoryId: '2', name: 'Pasta Carbonara', price: 16.99, description: 'Creamy bacon & egg', available: true, foodType: 'nonveg' },
+    { id: '301', categoryId: '3', name: 'Lemon Tart', price: 7.99, description: 'Zesty lemon curd', available: true, foodType: 'veg' },
+    { id: '302', categoryId: '3', name: 'Chocolate Lava Cake', price: 8.99, description: 'Warm chocolate center', available: true, foodType: 'veg' },
+    { id: '303', categoryId: '3', name: 'Tiramisu', price: 7.99, description: 'Classic Italian dessert', available: false, foodType: 'veg' },
+    { id: '401', categoryId: '4', name: 'Soft Drinks', price: 2.99, description: 'Coke, Sprite, Fanta', available: true, foodType: 'veg' },
+    { id: '402', categoryId: '4', name: 'Craft Beer', price: 5.99, description: 'Local IPA', available: true, foodType: 'veg' },
+    { id: '403', categoryId: '4', name: 'House Wine', price: 7.99, description: 'Red or white', available: true, foodType: 'veg' },
   ]);
 
-  const [categoryForm, setCategoryForm] = useState({ name: '' });
-  const [itemForm, setItemForm] = useState({ name: '', price: '', description: '', available: true });
+  const [categoryForm, setCategoryForm] = useState({ name: '', image: '' });
+  const [itemForm, setItemForm] = useState({ name: '', price: '', description: '', available: true, foodType: 'veg' });
 
   const [sizes, setSizes] = useState([]);
-  const [showSizeForm, setShowSizeForm] = useState(false);
   const [newSize, setNewSize] = useState({ quantity: '', price: '' });
+  const presetSizes = ['Small', 'Medium', 'Large', 'Half', 'Full', '250ml', '500ml', '1L'];
 
   useEffect(() => {
     if (categories.length > 0 && !selectedCategory) {
@@ -55,10 +64,11 @@ const MenuManagementPage = () => {
 
   const saveCategory = () => {
     if (!categoryForm.name.trim()) return;
+    const image = categoryForm.image.trim();
     if (editingCategory) {
-      setCategories(categories.map(c => c.id === editingCategory.id ? { ...c, name: categoryForm.name } : c));
+      setCategories(categories.map(c => c.id === editingCategory.id ? { ...c, name: categoryForm.name, image } : c));
     } else {
-      setCategories([...categories, { id: Date.now().toString(), name: categoryForm.name, itemCount: 0 }]);
+      setCategories([...categories, { id: Date.now().toString(), name: categoryForm.name, itemCount: 0, image }]);
     }
     setShowCategoryModal(false);
   };
@@ -72,12 +82,12 @@ const MenuManagementPage = () => {
       price: parseFloat(itemForm.price),
       description: itemForm.description,
       available: itemForm.available,
+      foodType: itemForm.foodType,
       sizes: sizes
     };
     setItems(editingItem ? items.map(i => i.id === editingItem.id ? newItem : i) : [...items, newItem]);
     setShowItemModal(false);
     setSizes([]);
-    setShowSizeForm(false);
     setNewSize({ quantity: '', price: '' });
   };
 
@@ -85,7 +95,6 @@ const MenuManagementPage = () => {
     if (newSize.quantity.trim() && newSize.price.trim()) {
       setSizes([...sizes, { id: Date.now().toString(), quantity: newSize.quantity, price: newSize.price }]);
       setNewSize({ quantity: '', price: '' });
-      setShowSizeForm(false);
     }
   };
 
@@ -124,7 +133,7 @@ const MenuManagementPage = () => {
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-black uppercase tracking-widest text-slate-600">Categories</h2>
               <button 
-                onClick={() => { setEditingCategory(null); setCategoryForm({ name: '' }); setShowCategoryModal(true); }}
+                onClick={() => { setEditingCategory(null); setCategoryForm({ name: '', image: '' }); setShowCategoryModal(true); }}
                 className="p-1.5 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-600 hover:text-white transition-all"
               >
                 <Plus size={16} />
@@ -142,10 +151,23 @@ const MenuManagementPage = () => {
                       : 'bg-white border-[#e6dfdc] text-slate-700 hover:border-orange-300'
                   }`}
                 >
-                  <p>{cat.name}</p>
-                  <p className={`text-[10px] font-bold mt-0.5 ${selectedCategory?.id === cat.id ? 'text-orange-600' : 'text-slate-500'}`}>
-                    {cat.itemCount} items
-                  </p>
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src={cat.image || getAutoCategoryImage(cat.name)}
+                      alt={cat.name}
+                      className="w-9 h-9 rounded-lg object-cover border border-[#e6dfdc]"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = getFallbackCategoryImage(cat.name);
+                      }}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate">{cat.name}</p>
+                      <p className={`text-[10px] font-bold mt-0.5 ${selectedCategory?.id === cat.id ? 'text-orange-600' : 'text-slate-500'}`}>
+                        {cat.itemCount} items
+                      </p>
+                    </div>
+                  </div>
                 </button>
               ))}
             </div>
@@ -161,7 +183,7 @@ const MenuManagementPage = () => {
                     <p className="text-xs text-slate-500 mt-1">{filteredItems.length} items in this category</p>
                   </div>
                   <button 
-                    onClick={() => { setEditingItem(null); setItemForm({ name: '', price: '', description: '', available: true }); setSizes([]); setShowSizeForm(false); setNewSize({ quantity: '', price: '' }); setShowItemModal(true); }}
+                    onClick={() => { setEditingItem(null); setItemForm({ name: '', price: '', description: '', available: true, foodType: 'veg' }); setSizes([]); setNewSize({ quantity: '', price: '' }); setShowItemModal(true); }}
                     className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest inline-flex items-center gap-2 transition-all"
                   >
                     <Plus size={16} /> Add Item
@@ -178,7 +200,7 @@ const MenuManagementPage = () => {
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
-                            onClick={() => { setEditingItem(item); setItemForm({ name: item.name, price: item.price.toString(), description: item.description, available: item.available }); setSizes(item.sizes || []); setShowItemModal(true); }}
+                            onClick={() => { setEditingItem(item); setItemForm({ name: item.name, price: item.price.toString(), description: item.description, available: item.available, foodType: item.foodType || 'veg' }); setSizes(item.sizes || []); setShowItemModal(true); }}
                             className="p-1.5 text-slate-400 hover:text-orange-600 transition-colors"
                           >
                             <Edit2 size={14} />
@@ -192,7 +214,12 @@ const MenuManagementPage = () => {
                         </div>
                       </div>
 
-                      <h3 className="text-sm font-black text-slate-900 mb-1">{item.name}</h3>
+                      <h3 className="text-sm font-black text-slate-900 mb-1 flex items-center gap-2">
+                        <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${item.foodType === 'nonveg' ? 'border-rose-500' : 'border-emerald-500'}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${item.foodType === 'nonveg' ? 'bg-rose-500' : 'bg-emerald-500'}`}></span>
+                        </span>
+                        {item.name}
+                      </h3>
                       <p className="text-xs text-slate-600 mb-3 line-clamp-2">{item.description}</p>
 
                       {/* Sizes */}
@@ -270,16 +297,49 @@ const MenuManagementPage = () => {
             {/* Content - Scrollable */}
             <div className="overflow-y-auto flex-1 px-6 py-6 space-y-5 scrollbar scrollbar-thumb-orange-200 scrollbar-track-slate-100" style={{scrollbarWidth: 'thin', scrollbarColor: '#fed7aa #f1f5f9'}}>
               {showCategoryModal ? (
-                <div className="space-y-3">
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-700 block">Category Name *</label>
-                  <input 
-                    type="text" 
-                    value={categoryForm.name} 
-                    onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} 
-                    className="w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border border-[#e6dfdc] bg-white text-slate-900 font-medium" 
-                    placeholder="e.g. Main Course, Appetizers" 
-                    autoFocus
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-700 block">Category Name *</label>
+                    <input 
+                      type="text" 
+                      value={categoryForm.name} 
+                      onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} 
+                      className="w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border border-[#e6dfdc] bg-white text-slate-900 font-medium" 
+                      placeholder="e.g. Main Course, Appetizers" 
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-700 block">Image URL (Optional)</label>
+                    <input
+                      type="text"
+                      value={categoryForm.image}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, image: e.target.value })}
+                      className="w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border border-[#e6dfdc] bg-white text-slate-900 font-medium"
+                      placeholder="Paste image URL or leave empty"
+                    />
+                    <p className="text-[11px] text-slate-500">Agar URL empty rahega to category name ke basis par auto food image show hogi.</p>
+                  </div>
+
+                  <div className="rounded-xl border border-[#e6dfdc] bg-white p-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mb-2">Preview</p>
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={categoryForm.image?.trim() || getAutoCategoryImage(categoryForm.name)}
+                        alt={categoryForm.name || 'Category preview'}
+                        className="w-16 h-16 rounded-lg object-cover border border-[#e6dfdc]"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = getFallbackCategoryImage(categoryForm.name || 'Food');
+                        }}
+                      />
+                      <div>
+                        <p className="text-sm font-black text-slate-900">{categoryForm.name?.trim() || 'Category Name'}</p>
+                        <p className="text-[11px] text-slate-500">Image will be saved with this category</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -294,6 +354,34 @@ const MenuManagementPage = () => {
                       autoFocus
                     />
                   </div>
+
+                  {itemForm.name.trim() && (
+                    <div className="space-y-3">
+                      <label className="text-xs font-black uppercase tracking-widest text-slate-700 block">Food Type</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setItemForm({ ...itemForm, foodType: 'veg' })}
+                          className={`flex items-center gap-2 px-4 py-3 rounded-lg border transition-all ${itemForm.foodType === 'veg' ? 'border-emerald-400 bg-emerald-50 ring-1 ring-emerald-200' : 'border-[#e6dfdc] bg-white hover:bg-slate-50'}`}
+                        >
+                          <span className="w-4 h-4 rounded-sm border border-emerald-500 flex items-center justify-center">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                          </span>
+                          <span className="text-xs font-black uppercase tracking-widest text-emerald-700">Veg</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setItemForm({ ...itemForm, foodType: 'nonveg' })}
+                          className={`flex items-center gap-2 px-4 py-3 rounded-lg border transition-all ${itemForm.foodType === 'nonveg' ? 'border-rose-400 bg-rose-50 ring-1 ring-rose-200' : 'border-[#e6dfdc] bg-white hover:bg-slate-50'}`}
+                        >
+                          <span className="w-4 h-4 rounded-sm border border-rose-500 flex items-center justify-center">
+                            <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                          </span>
+                          <span className="text-xs font-black uppercase tracking-widest text-rose-700">Non Veg</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-3">
@@ -321,72 +409,65 @@ const MenuManagementPage = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-xs font-black uppercase tracking-widest text-slate-700 block">Description</label>
+                    {/* <label className="text-xs font-black uppercase tracking-widest text-slate-700 block">Description</label>
                     <textarea 
                       value={itemForm.description} 
                       onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })} 
                       rows="3" 
                       className="w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border border-[#e6dfdc] bg-white text-slate-900 font-medium resize-none" 
                       placeholder="Brief description of the item..." 
-                    />
+                    /> */}
                   </div>
 
                   {/* Size Variants Section */}
+                  {itemForm.name.trim() && (
                   <div className="border-t border-[#eee6e3] pt-5 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">Size Variants (Optional)</h3>
-                      <button 
-                        onClick={() => setShowSizeForm(!showSizeForm)}
-                        className={`px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-all ${
-                          showSizeForm 
-                            ? 'bg-orange-600 text-white' 
-                            : 'bg-orange-100 hover:bg-orange-200 text-orange-600'
-                        }`}
-                      >
-                        {showSizeForm ? '✕ Cancel' : '+ Add Size'}
-                      </button>
-                    </div>
+                    <div className="rounded-xl border border-orange-200 bg-linear-to-br from-orange-50 to-white p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">Size Variants</h3>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-orange-600">Optional</span>
+                      </div>
 
-                    {showSizeForm && (
-                      <div className="bg-slate-50 p-4 rounded-lg space-y-3 border border-[#e6dfdc]">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-[10px] font-black uppercase text-slate-700 block mb-2">Size/Quantity</label>
-                            <input 
-                              type="text" 
-                              value={newSize.quantity} 
-                              onChange={(e) => setNewSize({ ...newSize, quantity: e.target.value })} 
-                              placeholder="500g, Small, Half" 
-                              className="w-full px-3 py-2 rounded text-sm border border-[#e6dfdc] outline-none focus:ring-2 focus:ring-orange-500 bg-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-black uppercase text-slate-700 block mb-2">Price (₹)</label>
-                            <input 
-                              type="number" 
-                              value={newSize.price} 
-                              onChange={(e) => setNewSize({ ...newSize, price: e.target.value })} 
-                              placeholder="0.00" 
-                              className="w-full px-3 py-2 rounded text-sm border border-[#e6dfdc] outline-none focus:ring-2 focus:ring-orange-500 bg-white"
-                            />
-                          </div>
+                      <div className="flex flex-wrap gap-2">
+                        {presetSizes.map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => setNewSize({ ...newSize, quantity: size })}
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${newSize.quantity === size ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-700 border-[#e6dfdc] hover:border-orange-300'}`}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-3">
+                        <div className="w-full px-3 py-2.5 rounded-lg text-sm border border-[#e6dfdc] bg-white text-slate-700 font-bold">
+                          {newSize.quantity || 'Select a size'}
                         </div>
-                        <button 
+                        <input
+                          type="number"
+                          value={newSize.price}
+                          onChange={(e) => setNewSize({ ...newSize, price: e.target.value })}
+                          placeholder="Price"
+                          className="w-full px-3 py-2.5 rounded-lg text-sm border border-[#e6dfdc] outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                        />
+                        <button
                           onClick={addSize}
-                          className="w-full px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
+                          className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
                         >
-                          Add This Size
+                          Add
                         </button>
                       </div>
-                    )}
+                    </div>
 
                     {sizes.length > 0 && (
-                      <div className="space-y-2 max-h-40 overflow-y-auto bg-slate-50 p-3 rounded-lg border border-[#e6dfdc]" style={{scrollbarWidth: 'thin', scrollbarColor: '#fed7aa #f1f5f9'}}>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto bg-slate-50 p-3 rounded-lg border border-[#e6dfdc]" style={{scrollbarWidth: 'thin', scrollbarColor: '#fed7aa #f1f5f9'}}>
                         {sizes.map((size) => (
-                          <div key={size.id} className="flex items-center justify-between p-2 rounded bg-white border border-[#eee6e3]">
+                          <div key={size.id} className="flex items-center justify-between p-2.5 rounded-lg bg-white border border-[#eee6e3]">
                             <div>
-                              <p className="text-xs font-bold text-slate-900">{size.quantity}</p>
-                              <p className="text-[10px] font-black text-orange-600">₹{size.price}</p>
+                              <p className="text-xs font-black text-slate-900">{size.quantity}</p>
+                              <p className="text-[11px] font-black text-orange-600">₹{size.price}</p>
                             </div>
                             <button 
                               onClick={() => removeSize(size.id)}
@@ -399,6 +480,7 @@ const MenuManagementPage = () => {
                       </div>
                     )}
                   </div>
+                  )}
                 </>
               )}
             </div>

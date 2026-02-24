@@ -25,13 +25,6 @@ const BOARD_COLUMNS = [
     borderClass: 'border-[#cfdef2]'
   },
   {
-    key: 'cancelled',
-    title: 'Cancelled Orders',
-    headClass: 'bg-red-500 text-white',
-    bodyClass: 'bg-[#f0dbe1]',
-    borderClass: 'border-[#ebd1d8]'
-  },
-  {
     key: 'completed',
     title: 'Completed Orders',
     headClass: 'bg-amber-500 text-white',
@@ -42,22 +35,160 @@ const BOARD_COLUMNS = [
 
 const Orders = () => {
   const [orders, setOrders] = useState([
-    { id: '#35345', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Chicken and Vegetable Bowl', qty: 2, status: 'pending' },
-    { id: '#35346', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Beef and Broccoli Stir Fry', qty: 2, status: 'pending' },
-    { id: '#35347', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Roasted Chicken with Cheese', qty: 2, status: 'pending' },
-    { id: '#35348', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Stuffed Bell Peppers', qty: 2, status: 'pending' },
-    { id: '#35349', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Shrimp Scampi with Linguine', qty: 2, status: 'accepted' },
-    { id: '#35350', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Vegetable Lasagna', qty: 2, status: 'accepted' },
-    { id: '#35351', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Baked Potato Bar', qty: 2, status: 'ongoing' },
-    { id: '#35352', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Chicken Alfredo with Broccoli', qty: 2, status: 'ongoing' },
-    { id: '#35353', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Chicken and Vegetable Pasta', qty: 2, status: 'ongoing' },
-    { id: '#35354', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Veggie Burgers with Sweet Corn', qty: 2, status: 'cancelled' },
-    { id: '#35355', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Baked Ziti with Meat Sauce', qty: 2, status: 'completed' },
-    { id: '#35356', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Homemade Macaroni and Cheese', qty: 2, status: 'completed' },
-    { id: '#35357', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Slow Cooker Beef and Veggies', qty: 2, status: 'completed' },
-    { id: '#35358', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Honey Mustard Glazed Salmon', qty: 2, status: 'completed' },
-    { id: '#35359', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Creamy Garlic Mushroom Pasta', qty: 2, status: 'completed' },
-    { id: '#35360', customerName: 'Ankit Gojera', phone: '9923444555', dish: 'Creamy Tomato Soup', qty: 2, status: 'completed' }
+    {
+      id: '#35345',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-05',
+      status: 'pending',
+      items: [
+        { name: 'Chicken and Vegetable Bowl', size: 'Full', qty: 1 },
+        { name: 'Creamy Tomato Soup', size: '250ml', qty: 1 }
+      ]
+    },
+    {
+      id: '#35346',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-03',
+      status: 'pending',
+      items: [
+        { name: 'Beef and Broccoli Stir Fry', size: 'Full', qty: 2 }
+      ]
+    },
+    {
+      id: '#35347',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-07',
+      status: 'pending',
+      items: [
+        { name: 'Roasted Chicken with Cheese', size: 'Half', qty: 1 },
+        { name: 'Stuffed Bell Peppers', size: 'Full', qty: 1 }
+      ]
+    },
+    {
+      id: '#35348',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-02',
+      status: 'pending',
+      items: [
+        { name: 'Stuffed Bell Peppers', size: 'Full', qty: 2 }
+      ]
+    },
+    {
+      id: '#35349',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-09',
+      status: 'accepted',
+      items: [
+        { name: 'Shrimp Scampi with Linguine', size: 'Full', qty: 1 },
+        { name: 'Creamy Garlic Mushroom Pasta', size: 'Half', qty: 1 }
+      ]
+    },
+    {
+      id: '#35350',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-01',
+      status: 'accepted',
+      items: [
+        { name: 'Vegetable Lasagna', size: 'Full', qty: 2 }
+      ]
+    },
+    {
+      id: '#35351',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-04',
+      status: 'ongoing',
+      items: [
+        { name: 'Baked Potato Bar', size: 'Full', qty: 2 }
+      ]
+    },
+    {
+      id: '#35352',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-06',
+      status: 'ongoing',
+      items: [
+        { name: 'Chicken Alfredo with Broccoli', size: 'Full', qty: 2 }
+      ]
+    },
+    {
+      id: '#35353',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-08',
+      status: 'ongoing',
+      items: [
+        { name: 'Chicken and Vegetable Pasta', size: 'Full', qty: 2 }
+      ]
+    },
+    {
+      id: '#35355',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-10',
+      status: 'completed',
+      items: [
+        { name: 'Baked Ziti with Meat Sauce', size: 'Full', qty: 1 },
+        { name: 'Honey Mustard Glazed Salmon', size: 'Full', qty: 1 }
+      ]
+    },
+    {
+      id: '#35356',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-12',
+      status: 'completed',
+      items: [
+        { name: 'Homemade Macaroni and Cheese', size: 'Full', qty: 2 }
+      ]
+    },
+    {
+      id: '#35357',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-11',
+      status: 'completed',
+      items: [
+        { name: 'Slow Cooker Beef and Veggies', size: 'Full', qty: 2 }
+      ]
+    },
+    {
+      id: '#35358',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-13',
+      status: 'completed',
+      items: [
+        { name: 'Honey Mustard Glazed Salmon', size: 'Full', qty: 2 }
+      ]
+    },
+    {
+      id: '#35359',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-14',
+      status: 'completed',
+      items: [
+        { name: 'Creamy Garlic Mushroom Pasta', size: 'Half', qty: 2 }
+      ]
+    },
+    {
+      id: '#35360',
+      customerName: 'Ankit Gojera',
+      phone: '9923444555',
+      tableNo: 'T-15',
+      status: 'completed',
+      items: [
+        { name: 'Creamy Tomato Soup', size: '500ml', qty: 2 }
+      ]
+    }
   ]);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,7 +214,7 @@ const Orders = () => {
         order.id.toLowerCase().includes(query) ||
         order.customerName.toLowerCase().includes(query) ||
         order.phone.includes(query) ||
-        order.dish.toLowerCase().includes(query)
+        order.items?.some((item) => item.name.toLowerCase().includes(query))
     );
   }, [orders, searchTerm]);
 
@@ -153,7 +284,7 @@ const Orders = () => {
 
           <div>
             <div className="overflow-hidden rounded-none border-x border-dashed border-[#d4c8c4] bg-[#f7f3f1]">
-              <div className="grid w-full grid-cols-1 gap-0 xl:grid-cols-5">
+              <div className="grid w-full grid-cols-1 gap-0 xl:grid-cols-4">
               {BOARD_COLUMNS.map((column) => (
                 <section
                   key={column.key}
@@ -170,7 +301,9 @@ const Orders = () => {
                       <article key={order.id} className="w-full rounded-lg border border-[#e2dad7] bg-[#fffdfc] px-2.5 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[9px] font-black tracking-wide text-slate-500">{order.id}</p>
-                          <p className="truncate text-[9px] font-bold text-slate-500">{order.phone}</p>
+                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600">
+                            {order.tableNo || 'T-N/A'}
+                          </span>
                         </div>
 
                         <p className="mt-0.5 truncate text-[10px] font-extrabold text-slate-700">{order.customerName}</p>
@@ -178,8 +311,12 @@ const Orders = () => {
                         <div className="mt-1.5 flex gap-2">
                           <div className={`h-10 w-10 shrink-0 rounded-md ${getThumbBg(order.status)} border border-slate-200`} />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-[12px] font-black leading-4 text-slate-800">{order.dish}</p>
-                            <p className="mt-0.5 text-[10px] font-bold text-slate-600">Qty: {order.qty}</p>
+                            <p className="truncate text-[12px] font-black leading-4 text-slate-800">
+                              {order.items?.[0]?.name || 'Order Item'}
+                            </p>
+                            <p className="mt-0.5 text-[10px] font-bold text-slate-600">
+                              Qty: {order.items?.reduce((sum, item) => sum + (item.qty || 0), 0) || 0}
+                            </p>
                           </div>
                         </div>
 

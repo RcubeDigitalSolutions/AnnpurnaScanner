@@ -42,7 +42,7 @@ export default function Sidebar({ onLogout, sidebarOpen, setSidebarOpen }) {
     { id: 'orders', icon: ClipboardList, label: 'Order', href: '/admin/orders' },
     { id: 'menu', icon: UtensilsCrossed, label: 'Menu', href: '/admin/menu' },
     // { id: 'analytics', icon: BarChart3, label: 'Analytics', href: '/admin/dashboard' },
-    { id: 'feedback', icon: MessageSquare, label: 'Feedback', href: '/admin/feedback' },
+    // { id: 'feedback', icon: MessageSquare, label: 'Feedback', href: '/admin/feedback' },
     { id: 'floorplan', icon: Users, label: 'Floor Plan', href: '/admin/floorplan' },
 
   ];
