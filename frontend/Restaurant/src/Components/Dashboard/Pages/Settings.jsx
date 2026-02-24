@@ -86,10 +86,13 @@ const Settings = () => {
   };
 
   const SettingSection = ({ title, description, children }) => (
-    <div className="bg-[#fffaf7] rounded-[28px] border border-[#e8dfdc] p-8 mb-8 shadow-[0_12px_24px_rgba(0,0,0,0.04)]">
-      <div className="mb-6 border-b border-[#f0e7e3] pb-6">
-        <h3 className="text-lg font-black text-slate-900 uppercase tracking-[0.08em]">{title}</h3>
-        <p className="text-[11px] font-bold text-[#9b7b67] uppercase tracking-widest mt-1">{description}</p>
+    <div className="rounded-3xl border border-orange-200 bg-white/90 p-7 md:p-8 shadow-[0_16px_32px_rgba(0,0,0,0.05)] backdrop-blur">
+      <div className="mb-6 flex items-start justify-between gap-4 border-b border-[#f0e7e3] pb-5">
+        <div>
+          <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-900">{title}</h3>
+          <p className="text-[11px] font-semibold text-slate-500 mt-2">{description}</p>
+        </div>
+        <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-orange-600">Settings</span>
       </div>
       <div>{children}</div>
     </div>
@@ -97,14 +100,14 @@ const Settings = () => {
 
   const InputField = ({ label, value, onChange, type = 'text', placeholder = '' }) => (
     <div className="space-y-2">
-      <label className="text-[10px] font-black uppercase tracking-widest text-[#8b6a57] ml-1">{label}</label>
+      <label className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 ml-1">{label}</label>
       <input
         type={type}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
         disabled={!editMode}
-        className="w-full px-5 py-3.5 border border-[#eadfda] rounded-2xl bg-[#fffdfb] text-slate-900 disabled:bg-[#f6f1ef] disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all font-medium"
+        className="w-full px-5 py-3.5 rounded-2xl bg-white text-slate-900 ring-1 ring-[#eadfda] disabled:bg-[#f6f1ef] disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:ring-offset-0 focus:border-orange-500 transition-all font-medium"
       />
     </div>
   );
@@ -123,30 +126,47 @@ const Settings = () => {
   );
 
   return (
-    <div className="bg-[#ece8e7] min-h-screen flex flex-col font-sans">
-      {/* Premium Header */}
-      <header className="px-10 pt-8 pb-4 flex items-center justify-between">
-        <div className="flex-1">
-          <h1 className="text-5xl font-black tracking-tighter text-slate-900 leading-tight">Settings</h1>
-          <div className="flex items-center gap-3 mt-3">
-            <p className="text-sm font-bold text-[#8b6a57] uppercase tracking-wider">Restaurant Configuration & Dashboard Control</p>
-          </div>
-          <div className="h-1.5 w-100 mt-5 bg-gradient-to-r from-orange-500 to-orange-400 rounded-full"></div>
-        </div>
-
-        <div className="flex items-center gap-4 ml-8">
-          {editMode ? (
-            <div className="flex gap-3">
-              <button onClick={() => setEditMode(false)} className="px-6 py-2.5 bg-slate-100 text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition">Cancel</button>
-              <button onClick={handleSave} className="px-6 py-2.5 bg-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-700 transition shadow-lg shadow-orange-600/20 flex items-center gap-2">
-                <Save size={16} /> Save Changes
-              </button>
+    <div className="bg-[#efebe9] min-h-screen flex flex-col font-sans">
+      {/* Header */}
+      <header className="px-6 pt-8 pb-4">
+        <div className="mx-auto max-w-6xl rounded-[32px] border border-orange-200 bg-linear-to-br from-white via-[#fff7f3] to-[#f6efe9] px-6 py-6 shadow-[0_18px_36px_rgba(0,0,0,0.06)]">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-white border border-orange-200 shadow-[0_10px_22px_rgba(249,115,22,0.15)] flex items-center justify-center">
+                <span className="text-orange-600 text-lg font-black">S</span>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.35em] text-orange-600">Control Center</p>
+                <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-800 mt-2">Settings</h1>
+                <p className="text-xs font-semibold text-slate-500 mt-2">Restaurant configuration, access, and operational preferences</p>
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="h-1 w-10 rounded-full bg-orange-600"></span>
+                  <span className="h-1 w-24 rounded-full bg-orange-200"></span>
+                </div>
+              </div>
             </div>
-          ) : (
-            <button onClick={() => setEditMode(true)} className="px-6 py-2.5 bg-orange-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 transition shadow-lg flex items-center gap-2">
-              <Edit2 size={16} /> Edit Profile
-            </button>
-          )}
+
+            <div className="flex items-center gap-3">
+              {editMode ? (
+                <div className="flex flex-wrap gap-3">
+                  <button onClick={() => setEditMode(false)} className="px-5 py-2.5 bg-white text-slate-800 border border-[#e6dfdc] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition">Cancel</button>
+                  <button onClick={handleSave} className="px-5 py-2.5 bg-linear-to-r from-orange-600 to-orange-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:from-orange-700 hover:to-orange-600 transition shadow-lg shadow-orange-600/20 flex items-center gap-2">
+                    <Save size={16} /> Save Changes
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="group px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition flex items-center gap-2 border border-slate-200 bg-white text-slate-900 shadow-[0_10px_22px_rgba(0,0,0,0.08)] hover:border-orange-200 hover:text-orange-700"
+                >
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-orange-50 text-orange-600 group-hover:bg-orange-100">
+                    <Edit2 size={14} />
+                  </span>
+                  Edit Profile
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 
@@ -161,11 +181,11 @@ const Settings = () => {
       )}
 
       <div className="p-10">
-        <div className="max-w-5xl mx-auto space-y-10">
+        <div className="max-w-6xl mx-auto space-y-10">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
-              <h2 className="text-xl font-black text-slate-900 uppercase tracking-[0.12em]">General & Security</h2>
-              <p className="text-xs text-[#8b6a57] mt-1">Manage profile, contact, location, and access</p>
+              <h2 className="text-xl font-black text-slate-900 uppercase tracking-[0.18em]">General & Security</h2>
+              <p className="text-xs text-slate-500 mt-1">Manage profile, contact, location, and access</p>
             </div>
             <div className="text-[10px] font-bold uppercase tracking-widest text-[#9b7b67]">
               Edit mode required to update fields
