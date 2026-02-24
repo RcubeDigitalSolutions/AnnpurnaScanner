@@ -8,6 +8,7 @@ import Feedback from './Components/Dashboard/Pages/Feedback'
 import Settings from './Components/Dashboard/Pages/Settings'
 import Sidebar from './Components/Common/Sidebar'
 import Menu from './Components/UserMenu/Pages/Menu'
+import FloorPlanPage from './Components/Dashboard/Pages/FloorPlan'
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -36,9 +37,14 @@ const AppRoutes = ({ isLoggedIn, setIsLoggedIn }) => {
 
   // Layout wrapper for authenticated pages with sidebar
   const AuthenticatedLayout = ({ children }) => (
-    <div className="h-screen w-screen overflow-hidden relative bg-slate-50">
+    <div className="h-screen w-screen overflow-hidden relative bg-[#ece8e7]">
       <Sidebar onLogout={handleLogout} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-      <main className={`h-full overflow-auto transition-all duration-300 ease-in-out ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
+      <main
+        className={`h-full overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out ${
+          sidebarOpen ? 'ml-60' : 'ml-20'
+        }`}
+        style={{ width: sidebarOpen ? 'calc(100% - 15rem)' : 'calc(100% - 5rem)' }}
+      >
         {children}
       </main>
     </div>
@@ -115,6 +121,16 @@ const AppRoutes = ({ isLoggedIn, setIsLoggedIn }) => {
           <ProtectedRoute>
             <AuthenticatedLayout>
               <Feedback />
+            </AuthenticatedLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin/floorplan" 
+        element={
+          <ProtectedRoute>
+            <AuthenticatedLayout>
+              <FloorPlanPage />
             </AuthenticatedLayout>
           </ProtectedRoute>
         } 

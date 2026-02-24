@@ -2,17 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
+  ClipboardList,
   UtensilsCrossed,
-  ShoppingCart,
+  BarChart3,
+  MessageSquare,
   Users,
   Settings,
+  CircleHelp,
   LogOut,
   Menu,
   X,
-  Home,
-  Clock,
-  TrendingUp,
-  MessageCircle,
 } from 'lucide-react';
 
 export default function Sidebar({ onLogout, sidebarOpen, setSidebarOpen }) {
@@ -20,28 +19,37 @@ export default function Sidebar({ onLogout, sidebarOpen, setSidebarOpen }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Sync activeMenu with current route
   useEffect(() => {
     const currentPath = location.pathname;
-    if (currentPath.includes('/admin/menu')) {
-      setActiveMenu('menu');
-    } else if (currentPath.includes('/admin/dashboard')) {
-      setActiveMenu('dashboard');
-    } else if (currentPath.includes('/admin/orders')) {
+
+    if (currentPath.includes('/admin/orders')) {
       setActiveMenu('orders');
+    } else if (currentPath.includes('/admin/menu')) {
+      setActiveMenu('menu');
     } else if (currentPath.includes('/admin/feedback')) {
       setActiveMenu('feedback');
+    } else if (currentPath.includes('/admin/floorplan')) {
+      setActiveMenu('floorplan');
     } else if (currentPath.includes('/admin/settings')) {
       setActiveMenu('settings');
+    } else {
+      setActiveMenu('dashboard');
     }
   }, [location.pathname]);
 
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', href: '/admin/dashboard' },
-    { id: 'menu', icon: UtensilsCrossed, label: 'Menu Items', href: '/admin/menu' },
-    { id: 'orders', icon: ShoppingCart, label: 'Orders', href: '/admin/orders' },
-    { id: 'feedback', icon: MessageCircle, label: 'Feedback', href: '/admin/feedback' },
+    { id: 'orders', icon: ClipboardList, label: 'Order', href: '/admin/orders' },
+    { id: 'menu', icon: UtensilsCrossed, label: 'Menu', href: '/admin/menu' },
+    // { id: 'analytics', icon: BarChart3, label: 'Analytics', href: '/admin/dashboard' },
+    { id: 'feedback', icon: MessageSquare, label: 'Feedback', href: '/admin/feedback' },
+    { id: 'floorplan', icon: Users, label: 'Floor Plan', href: '/admin/floorplan' },
+
+  ];
+
+  const footerItems = [
     { id: 'settings', icon: Settings, label: 'Settings', href: '/admin/settings' },
+    { id: 'support', icon: CircleHelp, label: 'Help & Support', href: '/admin/settings' },
   ];
 
   const handleLogout = () => {
@@ -60,98 +68,86 @@ export default function Sidebar({ onLogout, sidebarOpen, setSidebarOpen }) {
   return (
     <aside
       className={`${
-        sidebarOpen ? 'w-64' : 'w-20'
-      } bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white shadow-2xl transition-all duration-300 ease-in-out overflow-y-auto flex flex-col h-screen fixed left-0 top-0 z-10 border-r border-slate-800`}
+        sidebarOpen ? 'w-60' : 'w-20'
+      } bg-[#f5f1f0] text-slate-800 shadow-sm transition-all duration-300 ease-in-out overflow-y-auto overflow-x-hidden flex flex-col h-screen fixed left-0 top-0 z-10 border-r border-[#e5deda]`}
     >
-        {/* Header */}
-        <div className="p-6 border-b border-slate-700/50 sticky top-0 bg-slate-950 z-10 backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <div className={`flex items-center gap-3 ${!sidebarOpen && 'justify-center w-full'}`}>
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-600/30 transform hover:scale-110 transition-transform duration-200">
-                <Home className="w-6 h-6 text-white" />
-              </div>
-              {sidebarOpen && (
-                <div>
-                  <h1 className="font-black text-lg tracking-tight text-white">Annpurna</h1>
-                  <p className="text-xs text-slate-400 font-semibold capitalize">Management</p>
-                </div>
-              )}
+      <div className="p-5 border-b border-[#e5deda] sticky top-0 bg-[#f5f1f0] z-10">
+        <div className={`relative flex items-center ${sidebarOpen ? 'justify-between' : 'justify-center'}`}>
+          <div className={`flex items-center gap-3 min-w-0 ${!sidebarOpen && 'justify-center'}`}>
+            <div className="w-9 h-9 bg-orange-500 rounded-lg flex items-center justify-center text-white font-black">
+              R
             </div>
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-slate-800 rounded-lg transition-all duration-200 text-slate-400 hover:text-orange-500 transform hover:scale-110"
-            >
-              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
-          </div>
-        </div>
-
-        {/* User Profile Section */}
-        {sidebarOpen && (
-          <div className="px-6 py-4 bg-gradient-to-r from-slate-800 to-slate-800/50 border-b border-slate-700/50">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center text-white font-black text-sm shadow-lg">
-                AR
+            {sidebarOpen && (
+              <div>
+                <h1 className="font-bold text-lg tracking-tight text-slate-800">Restroq</h1>
+                <p className="text-[11px] text-slate-500">Restaurant Panel</p>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate">Admin User</p>
-                <p className="text-xs text-slate-400 truncate">admin@annpurna.com</p>
-              </div>
-            </div>
+            )}
           </div>
-        )}
-
-        {/* Navigation Menu */}
-        <nav className="flex-1 px-3 py-6 space-y-2">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleNavigate(item.href, item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group transform ${
-                activeMenu === item.id
-                  ? 'bg-gradient-to-r from-orange-600 to-orange-500 shadow-lg shadow-orange-600/30 scale-105 ' + (sidebarOpen ? 'pl-5' : '')
-                  : 'hover:bg-slate-800/50'
-              } ${
-                sidebarOpen
-                  ? 'hover:shadow-md hover:pl-5'
-                  : 'hover:bg-slate-800/50 justify-center'
-              }`}
-            >
-              <item.icon
-                size={20}
-                className={`flex-shrink-0 transition-all duration-200 transform group-hover:scale-110 ${
-                  activeMenu === item.id
-                    ? 'text-white scale-110'
-                    : 'text-slate-400 group-hover:text-orange-500'
-                }`}
-              />
-              {sidebarOpen && (
-                <span
-                  className={`text-sm font-semibold transition-all duration-200 ${
-                    activeMenu === item.id
-                      ? 'text-white'
-                      : 'text-slate-300 group-hover:text-orange-400'
-                  }`}
-                >
-                  {item.label}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-
-        {/* Logout Button */}
-        <div className="p-4 border-t border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
           <button
-            onClick={handleLogout}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg shadow-red-600/20 ${
-              !sidebarOpen && 'py-2'
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className={`p-2 hover:bg-[#ece5e2] rounded-lg transition-all duration-200 text-slate-500 hover:text-orange-500 ${
+              !sidebarOpen ? 'absolute right-0 top-1/2 -translate-y-1/2' : ''
             }`}
           >
-            <LogOut size={18} />
-            {sidebarOpen && 'Logout'}
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
-      </aside>
-    );
+      </div>
+
+      <nav className="flex-1 px-3 py-4 space-y-1">
+        {menuItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => handleNavigate(item.href, item.id)}
+            className={`flex items-center rounded-xl transition-all duration-200 ${
+              activeMenu === item.id
+                ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                : 'hover:bg-[#ede7e4] text-slate-600'
+            } ${
+              sidebarOpen ? 'w-full gap-3 px-3 py-2.5' : 'w-11 h-11 mx-auto justify-center p-0'
+            }`}
+          >
+            <item.icon size={18} className={activeMenu === item.id ? 'text-orange-600' : 'text-slate-500'} />
+            {sidebarOpen && (
+              <span className={`text-sm font-medium ${activeMenu === item.id ? 'text-orange-700' : 'text-slate-700'}`}>
+                {item.label}
+              </span>
+            )}
+          </button>
+        ))}
+      </nav>
+
+      <div className="px-3 pb-3 space-y-1 border-t border-[#e5deda] pt-3">
+        {footerItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => handleNavigate(item.href, item.id)}
+            className={`flex items-center rounded-xl transition-all duration-200 ${
+              activeMenu === item.id
+                ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                : 'hover:bg-[#ede7e4] text-slate-600'
+            } ${
+              sidebarOpen ? 'w-full gap-3 px-3 py-2.5' : 'w-11 h-11 mx-auto justify-center p-0'
+            }`}
+          >
+            <item.icon size={18} className={activeMenu === item.id ? 'text-orange-600' : 'text-slate-500'} />
+            {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
+          </button>
+        ))}
+      </div>
+
+      <div className="p-3 border-t border-[#e5deda] bg-[#f7f3f2]">
+        <button
+          onClick={handleLogout}
+          className={`flex items-center justify-center gap-2 rounded-xl border border-slate-300 hover:border-red-200 hover:bg-red-50 text-slate-700 hover:text-red-600 font-semibold transition-all duration-200 ${
+            sidebarOpen ? 'w-full px-4 py-3' : 'w-11 h-11 mx-auto p-0'
+          }`}
+        >
+          <LogOut size={18} />
+          {sidebarOpen && 'Logout'}
+        </button>
+      </div>
+    </aside>
+  );
 }
