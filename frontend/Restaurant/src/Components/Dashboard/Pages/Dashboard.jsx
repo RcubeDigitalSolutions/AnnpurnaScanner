@@ -66,28 +66,22 @@ const Dashboard = () => {
             <p className="text-xs text-slate-500 mt-0.5">Restaurant Management Dashboard</p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button className="h-9 w-9 rounded-full border border-[#e6dfdc] bg-[#fdfbfa] text-slate-500 flex items-center justify-center">
-              <Search size={16} />
-            </button>
-            <button className="h-9 w-9 rounded-full border border-[#e6dfdc] bg-[#fdfbfa] text-slate-500 flex items-center justify-center relative">
-              <Bell size={16} />
-              <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-orange-500" />
-            </button>
-            <div className="flex items-center gap-2 rounded-full border border-[#e6dfdc] bg-[#fdfbfa] px-2 py-1">
+          <div className="flex items-center gap-3 ">
+           
+            <div className="flex min-w-35 items-center gap-2 rounded-full border border-[#e6dfdc] bg-[#fdfbfa] px-2 py-1 ">
               <div className="h-8 w-8 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold flex items-center justify-center">
                 DK
               </div>
               <div className="pr-1">
-                <p className="text-xs font-semibold text-slate-800 leading-4">Daniel K.</p>
+                <p className="text-xs font-semibold text-slate-800 leading-4">Daniel Kahan</p>
                 <p className="text-[11px] text-slate-500 leading-4">Admin</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="p-4 md:p-5 grid grid-cols-1 xl:grid-cols-4 gap-4">
-          <div className="xl:col-span-3 space-y-4">
+        <div className="grid grid-cols-1 gap-4 p-4 md:p-5">
+          <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {kpiCards.map((card) => (
                 <div key={card.label} className="rounded-2xl border border-[#e6dfdc] bg-[#fdfbfa] p-4">
@@ -106,8 +100,8 @@ const Dashboard = () => {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-              <div className="lg:col-span-3 rounded-2xl border border-[#e6dfdc] bg-[#fdfbfa] p-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-6">
+              <div className="rounded-2xl border border-[#e6dfdc] bg-[#fdfbfa] p-4 lg:col-span-4">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-800">Average Monthly Income</h3>
@@ -146,7 +140,7 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="lg:col-span-2 rounded-2xl border border-[#e6dfdc] bg-[#fdfbfa] p-4">
+              <div className="rounded-2xl border border-[#e6dfdc] bg-[#fdfbfa] p-4 lg:col-span-2">
                 <h3 className="text-sm font-semibold text-slate-800 mb-4">Top Categories</h3>
                 <div className="space-y-3">
                   {topCategories.map((item) => (
@@ -198,72 +192,6 @@ const Dashboard = () => {
                 </table>
               </div>
             </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-[#e7d8d1] bg-[#fdf3ef] p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-800">POS Overview</h3>
-                <div className="rounded-full border border-[#e7d8d1] bg-[#fff9f6] px-2 py-1 text-xs text-slate-600 flex items-center gap-1">
-                  Monthly <ChevronDown size={12} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 mt-4 text-center">
-                <div>
-                  <p className="text-[11px] text-slate-500">Total Bill</p>
-                  <p className="text-sm font-semibold text-slate-800">165</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-slate-500">AVG Value</p>
-                  <p className="text-sm font-semibold text-slate-800">$76</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-slate-500">Pick Hour</p>
-                  <p className="text-sm font-semibold text-slate-800">9.00 AM</p>
-                </div>
-              </div>
-
-              <div className="h-56 mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={paymentSplit}
-                      dataKey="value"
-                      innerRadius={64}
-                      outerRadius={84}
-                      startAngle={90}
-                      endAngle={-270}
-                      paddingAngle={4}
-                    >
-                      {paymentSplit.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="-mt-32 text-center">
-                  <p className="text-3xl font-semibold text-slate-800">$3,577</p>
-                  <p className="text-sm text-slate-500">Total Payment</p>
-                </div>
-              </div>
-
-              <div className="mt-2 flex items-center justify-center gap-4 text-xs text-slate-600">
-                {paymentSplit.map((item) => (
-                  <span key={item.name} className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                    {item.name} {Math.round((item.value / totalBill) * 100)}%
-                  </span>
-                ))}
-              </div>
-
-              <button className="w-full mt-4 rounded-lg border border-orange-200 text-orange-600 bg-[#fffaf8] py-2 text-sm font-medium hover:bg-orange-50 transition-colors">
-                View Details
-              </button>
-            </div>
-
-           
           </div>
         </div>
       </div>

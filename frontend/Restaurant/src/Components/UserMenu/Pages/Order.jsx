@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, StickyNote } from 'lucide-react'
+import { X, StickyNote, User, Phone } from 'lucide-react'
 
 const sizeOptions = [
   { value: 'regular', label: 'Regular', addOn: 0 },
@@ -19,6 +19,7 @@ const extrasOptions = [
 
 const Order = ({
   cart,
+  tableNumber,
   showCartModal,
   setShowCartModal,
   removeFromCart,
@@ -33,6 +34,9 @@ const Order = ({
 }) => {
   const [openNoteEditors, setOpenNoteEditors] = useState({})
   const [noteDrafts, setNoteDrafts] = useState({})
+  const [showCheckoutForm, setShowCheckoutForm] = useState(false)
+  const [customerDetails, setCustomerDetails] = useState({ name: '', phone: '' })
+  const [formErrors, setFormErrors] = useState({})
 
   const getSizeAddOn = (selectedSize) => {
     const option = sizeOptions.find(size => size.value === selectedSize)
@@ -132,15 +136,85 @@ const Order = ({
     })
   }
 
+  const handleOpenCheckout = () => {
+    setFormErrors({})
+    setShowCheckoutForm(true)
+  }
+
+  const validateCustomerDetails = () => {
+    const errors = {}
+    const name = customerDetails.name.trim()
+    const phone = customerDetails.phone.trim()
+
+    if (!name) {
+      errors.name = 'Please enter your name'
+    } else if (name.length < 2) {
+      errors.name = 'Name should be at least 2 characters'
+    }
+
+    if (!phone) {
+      errors.phone = 'Please enter your phone number'
+    } else if (!/^\d{10}$/.test(phone)) {
+      errors.phone = 'Phone number must be 10 digits'
+    }
+
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleSubmitOrder = (e) => {
+    e.preventDefault()
+
+    if (!validateCustomerDetails()) {
+      return
+    }
+
+    const orderPayload = {
+      customer: {
+        name: customerDetails.name.trim(),
+        phone: customerDetails.phone.trim()
+      },
+      items: cart.map(item => {
+        const selectedExtraIds = Object.entries(selectedExtras[item.id] || {})
+          .filter(([_, isSelected]) => isSelected)
+          .map(([extraId]) => extraId)
+
+        return {
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          selectedSize: item.selectedSize || 'regular',
+          extras: selectedExtraIds,
+          notes: parseInstructions(itemNotes[item.id]),
+          lineTotal: getItemTotalPrice(item)
+        }
+      }),
+      totalAmount: getTotalAmount()
+    }
+
+    console.log('Order submitted:', orderPayload)
+    alert(`Order placed successfully for ${orderPayload.customer.name}!`)
+    setCart([])
+    setItemNotes({})
+    setSelectedExtras({})
+    setCustomerDetails({ name: '', phone: '' })
+    setShowCheckoutForm(false)
+    setShowCartModal(false)
+  }
+
   if (!showCartModal || cart.length === 0) {
     return null
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 sm:items-center sm:p-4">
+    <>
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 sm:items-center sm:p-4">
       <div className="relative flex h-auto max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl sm:max-h-[88vh] sm:rounded-2xl">
         <button
-          onClick={() => setShowCartModal(false)}
+          onClick={() => {
+            setShowCheckoutForm(false)
+            setShowCartModal(false)
+          }}
           className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition hover:bg-gray-200"
         >
           <X className="h-5 w-5" />
@@ -333,12 +407,7 @@ const Order = ({
               <p className="text-xs font-medium uppercase tracking-wide text-white/80">SUBTOTAL</p>
             </div>
             <button
-              onClick={() => {
-                alert('Order placed successfully!')
-                setCart([])
-                setItemNotes({})
-                setShowCartModal(false)
-              }}
+              onClick={handleOpenCheckout}
               className="w-full rounded-xl bg-white px-8 py-3 text-base font-bold text-orange-600 shadow-lg transition hover:bg-gray-50 sm:w-auto"
             >
               Place Order
@@ -346,7 +415,129 @@ const Order = ({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+
+      {showCheckoutForm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="bg-gradient-to-r from-orange-600 to-orange-500 px-5 py-4 text-white">
+              <h3 className="text-lg font-bold">Complete Your Order</h3>
+              <p className="mt-1 text-sm text-white/90">Enter details to confirm your order</p>
+            </div>
+
+            <form onSubmit={handleSubmitOrder} className="space-y-4 px-5 py-5">
+              <div className="rounded-xl border border-orange-100 bg-orange-50/60 px-3 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-orange-700">Order Summary</p>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Table Number</span>
+                  <span className="font-semibold text-gray-900">{tableNumber || 'N/A'}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Items</span>
+                  <span className="font-semibold text-gray-900">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-bold text-orange-700">₹ {getTotalAmount().toFixed(2)}</span>
+                </div>
+
+                <div className="mt-2 max-h-36 space-y-1.5 overflow-y-auto rounded-lg border border-orange-100 bg-white/80 p-2">
+                  {cart.map(item => {
+                    const selectedSize = item.selectedSize || 'regular'
+                    const selectedExtrasList = Object.entries(selectedExtras[item.id] || {})
+                      .filter(([_, isSelected]) => isSelected)
+                      .map(([extraId]) => extrasOptions.find(extra => extra.id === extraId)?.label)
+                      .filter(Boolean)
+
+                    const notesList = parseInstructions(itemNotes[item.id])
+
+                    return (
+                      <div key={`checkout-summary-${item.id}`} className="rounded-md border border-orange-100 bg-white px-2 py-1.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs font-semibold text-gray-900">
+                            {item.name} x{item.quantity}
+                          </p>
+                          <p className="text-xs font-bold text-orange-700">₹ {getItemTotalPrice(item).toFixed(2)}</p>
+                        </div>
+
+                        <p className="mt-0.5 text-[11px] text-gray-600">Size: {selectedSize}</p>
+
+                        {selectedExtrasList.length > 0 && (
+                          <p className="mt-0.5 text-[11px] text-gray-600">
+                            Extras: {selectedExtrasList.join(', ')}
+                          </p>
+                        )}
+
+                        {notesList.length > 0 && (
+                          <p className="mt-0.5 text-[11px] text-gray-600">
+                            Notes: {notesList.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Full Name</label>
+                <div className={`flex items-center gap-2 rounded-xl border bg-white px-3 py-2 ${
+                  formErrors.name ? 'border-red-400' : 'border-gray-300 focus-within:border-orange-500'
+                }`}>
+                  <User className="h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={customerDetails.name}
+                    onChange={(e) => setCustomerDetails(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter your name"
+                    className="w-full border-none bg-transparent text-sm text-gray-800 outline-none"
+                  />
+                </div>
+                {formErrors.name && <p className="mt-1 text-xs font-medium text-red-500">{formErrors.name}</p>}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Phone Number</label>
+                <div className={`flex items-center gap-2 rounded-xl border bg-white px-3 py-2 ${
+                  formErrors.phone ? 'border-red-400' : 'border-gray-300 focus-within:border-orange-500'
+                }`}>
+                  <Phone className="h-4 w-4 text-gray-400" />
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    value={customerDetails.phone}
+                    onChange={(e) => {
+                      const numbersOnly = e.target.value.replace(/\D/g, '')
+                      setCustomerDetails(prev => ({ ...prev, phone: numbersOnly }))
+                    }}
+                    placeholder="10-digit phone number"
+                    className="w-full border-none bg-transparent text-sm text-gray-800 outline-none"
+                  />
+                </div>
+                {formErrors.phone && <p className="mt-1 text-xs font-medium text-red-500">{formErrors.phone}</p>}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowCheckoutForm(false)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700"
+                >
+                  Confirm & Submit
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

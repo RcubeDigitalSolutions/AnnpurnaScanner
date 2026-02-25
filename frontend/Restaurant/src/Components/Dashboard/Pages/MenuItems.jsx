@@ -442,9 +442,13 @@ const MenuManagementPage = () => {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-3">
-                        <div className="w-full px-3 py-2.5 rounded-lg text-sm border border-[#e6dfdc] bg-white text-slate-700 font-bold">
-                          {newSize.quantity || 'Select a size'}
-                        </div>
+                        <input
+                          type="text"
+                          value={newSize.quantity}
+                          onChange={(e) => setNewSize({ ...newSize, quantity: e.target.value })}
+                          placeholder="Select or type size"
+                          className="w-full px-3 py-2.5 rounded-lg text-sm border border-[#e6dfdc] outline-none focus:ring-2 focus:ring-orange-500 bg-white text-slate-700 font-bold"
+                        />
                         <input
                           type="number"
                           value={newSize.price}
@@ -462,16 +466,16 @@ const MenuManagementPage = () => {
                     </div>
 
                     {sizes.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto bg-slate-50 p-3 rounded-lg border border-[#e6dfdc]" style={{scrollbarWidth: 'thin', scrollbarColor: '#fed7aa #f1f5f9'}}>
+                      <div className="grid max-h-44 grid-cols-1 gap-2 overflow-y-auto rounded-xl border border-[#e6dfdc] bg-white p-2.5 sm:grid-cols-2" style={{scrollbarWidth: 'thin', scrollbarColor: '#fed7aa #f1f5f9'}}>
                         {sizes.map((size) => (
-                          <div key={size.id} className="flex items-center justify-between p-2.5 rounded-lg bg-white border border-[#eee6e3]">
-                            <div>
-                              <p className="text-xs font-black text-slate-900">{size.quantity}</p>
+                          <div key={size.id} className="flex items-center justify-between rounded-lg border border-[#eee6e3] bg-slate-50 px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                            <div className="min-w-0 pr-2">
+                              <p className="truncate text-xs font-black text-slate-900">{size.quantity}</p>
                               <p className="text-[11px] font-black text-orange-600">₹{size.price}</p>
                             </div>
                             <button 
                               onClick={() => removeSize(size.id)}
-                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
+                              className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600"
                             >
                               <Trash2 size={14} />
                             </button>

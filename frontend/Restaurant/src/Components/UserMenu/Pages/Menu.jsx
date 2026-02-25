@@ -3,6 +3,7 @@ import { Search, ChevronDown, ChevronUp, Home as HomeIcon, UtensilsCrossed, Clip
 import Order from './Order'
 
 const Menu = () => {
+  const tableNumber = '15'
   const [cart, setCart] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('Napoli Fold Sandwich')
@@ -231,7 +232,7 @@ const Menu = () => {
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <div className="flex items-center gap-1 text-xs text-gray-700 sm:text-sm">
                 <UtensilsCrossed className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span>15</span>
+                <span>{tableNumber}</span>
               </div>
               <button className="flex items-center gap-1 rounded-full border-2 border-teal-500 px-2.5 py-1 text-xs font-semibold text-teal-600 whitespace-nowrap sm:gap-2 sm:px-3 sm:py-1.5 sm:text-sm">
                 <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -502,6 +503,7 @@ const Menu = () => {
 
       <Order
         cart={cart}
+        tableNumber={tableNumber}
         showCartModal={showCartModal}
         setShowCartModal={setShowCartModal}
         removeFromCart={removeFromCart}
