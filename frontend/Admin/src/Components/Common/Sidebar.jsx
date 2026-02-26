@@ -1,12 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, CreditCard, LogOut } from 'lucide-react';
+import { useState } from 'react';
+import { adminLogout } from '../../api/adminApi';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
   const navigate = useNavigate();
 
   const menuItems = [
-    { id: 'members', label: 'Team Members', icon: Users, path: '/team-members' },
+    { id: 'members', label: 'Restaurants', icon: Users, path: '/restaurant' },
     { id: 'payments', label: 'Payment History', icon: CreditCard, path: '/payment-history' },
   ];
 
@@ -15,8 +17,24 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     navigate(item.path);
   };
 
-  const handleLogout = () => {
-    navigate('/login');
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await adminLogout();
+    } catch (err) {
+      // ignore errors; still clear local state
+    } finally {
+      localStorage.removeItem('token');
+      try {
+        navigate('/login');
+      } catch (e) {
+        window.location.href = '/login';
+      }
+      setLoggingOut(false);
+    }
   };
 
   return (
@@ -44,9 +62,6 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       >
         <LogOut size={20} /> Logout
       </button>
-      <div className="pt-6 border-t border-slate-800 text-xs text-slate-500 italic">
-        v1.0.4 Secure Access
-      </div>
     </div>
   );
 };

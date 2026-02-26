@@ -1,16 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, Eye, EyeOff, UtensilsCrossed } from 'lucide-react';
+import { adminLogin } from '../../api/adminApi';
+import Toast from '../Common/Toast';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [toast, setToast] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Authenticating Team Member...", formData);
-    navigate('/team-members');
+    (async () => {
+      try {
+        const res = await adminLogin(formData);
+        const accessToken = res.data.accessToken;
+        if (accessToken) localStorage.setItem('token', accessToken);
+        setToast({ message: 'Login successful', type: 'success' });
+        setTimeout(() => navigate('/restaurant'), 600);
+      } catch (err) {
+        const msg = err?.response?.data?.message || 'Login failed';
+        setToast({ message: msg, type: 'error' });
+      }
+    })();
   };
 
   return (
@@ -110,6 +123,13 @@ const AdminLogin = () => {
           Authorized Team Access Only. All actions are logged.
         </p>
       </div>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };

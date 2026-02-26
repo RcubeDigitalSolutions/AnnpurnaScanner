@@ -14,12 +14,15 @@ const MenuItemSchema = new mongoose.Schema(
       required: true,
     },
 
-    name: { type: String, required: true },
+    name: { type: String, required: true, trim: true },
 
-    size: {
-      name: { type: String, required: true },   // e.g. Small, Medium
-      price: { type: Number, required: true },
-    },
+    // Better: allow multiple sizes
+    sizes: [
+      {
+        name: { type: String, required: true }, // Small, Medium
+        price: { type: Number, required: true },
+      },
+    ],
   },
   { timestamps: true }
 );

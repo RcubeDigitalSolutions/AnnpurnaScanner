@@ -3,9 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom
 import AdminLogin from './Components/Pages/Login'
 import AdminRegister from './Components/Pages/Register'
 import ForgotPassword from './Components/Pages/ForgotPassword'
-import TeamMembers from './Components/Pages/TeamMembers'
+import Restaurant from './Components/Pages/Restaurant'
 import PaymentHistory from './Components/Pages/PaymentHistory'
 import Sidebar from './Components/Common/Sidebar'
+import PrivateRoute from './Components/Common/PrivateRoute'
 
 // Layout component with Sidebar
 const SidebarLayout = () => {
@@ -35,9 +36,9 @@ const App = () => {
         <Route path="/register" element={<AdminRegister />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         
-        {/* Protected Routes with Sidebar */}
-        <Route element={<SidebarLayout />}>
-          <Route path="/team-members" element={<TeamMembers />} />
+        {/* Protected Routes with Sidebar (wrapped by PrivateRoute) */}
+        <Route element={<PrivateRoute><SidebarLayout /></PrivateRoute>}>
+          <Route path="/restaurant" element={<Restaurant />} />
           <Route path="/payment-history" element={<PaymentHistory />} />
         </Route>
       </Routes>

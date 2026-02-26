@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, Eye, EyeOff, UtensilsCrossed, Mail, CheckCircle } from 'lucide-react';
+import { createAdmin } from '../../api/adminApi';
+import Toast from '../Common/Toast';
 
 const AdminRegister = () => {
   const navigate = useNavigate();
@@ -14,13 +16,10 @@ const AdminRegister = () => {
     restaurantName: ''
   });
   const [errors, setErrors] = useState({});
+  const [toast, setToast] = useState(null);
 
   const validateForm = () => {
     const newErrors = {};
-    
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
-    }
     
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
@@ -38,9 +37,7 @@ const AdminRegister = () => {
       newErrors.confirmPassword = 'Passwords do not match';
     }
     
-    if (!formData.restaurantName.trim()) {
-      newErrors.restaurantName = 'Restaurant name is required';
-    }
+    // fullName and restaurantName are optional because those inputs are currently commented out
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -50,8 +47,21 @@ const AdminRegister = () => {
     e.preventDefault();
     
     if (validateForm()) {
-      console.log("Registering new team member...", formData);
-      navigate('/team-members');
+      (async () => {
+        try {
+          const payload = {
+            username: formData.fullName || formData.email,
+            email: formData.email,
+            password: formData.password,
+          };
+          await createAdmin(payload);
+          setToast({ message: 'Account created successfully. Please login.', type: 'success' });
+          setTimeout(() => navigate('/login'), 900);
+        } catch (err) {
+          const msg = err?.response?.data?.message || 'Registration failed';
+          setToast({ message: msg, type: 'error' });
+        }
+      })();
     }
   };
 
@@ -86,48 +96,6 @@ const AdminRegister = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Full Name Field */}
-          {/* <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Full Name</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-slate-500" />
-              </div>
-              <input
-                type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                className={`block w-full pl-10 pr-3 py-2.5 bg-slate-800 border ${
-                  errors.fullName ? 'border-red-500' : 'border-slate-700'
-                } rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all`}
-                placeholder="John Doe"
-              />
-            </div>
-            {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
-          </div> */}
-
-          {/* Restaurant Name Field */}
-          {/* <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Restaurant Name</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <UtensilsCrossed className="h-5 w-5 text-slate-500" />
-              </div>
-              <input
-                type="text"
-                name="restaurantName"
-                value={formData.restaurantName}
-                onChange={handleChange}
-                className={`block w-full pl-10 pr-3 py-2.5 bg-slate-800 border ${
-                  errors.restaurantName ? 'border-red-500' : 'border-slate-700'
-                } rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all`}
-                placeholder="Annpurna Restaurant"
-              />
-            </div>
-            {errors.restaurantName && <p className="text-red-500 text-xs mt-1">{errors.restaurantName}</p>}
-          </div> */}
-
           {/* Email Field */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">Team Email</label>
