@@ -33,6 +33,7 @@ const Order = ({
   setCart,
   selectedExtras,
   setSelectedExtras
+  , sizeSelection, setSizeSelection
 }) => {
   const [openNoteEditors, setOpenNoteEditors] = useState({})
   const [noteDrafts, setNoteDrafts] = useState({})
@@ -45,11 +46,46 @@ const Order = ({
     return option ? option.addOn : 0
   }
 
-  const getItemExtrasTotal = (itemId) => {
-    const itemExtras = selectedExtras[itemId] || {}
+  const getItemExtrasTotal = (item) => {
+    const itemExtras = selectedExtras[item.id] || {}
     return Object.entries(itemExtras)
       .filter(([_, isSelected]) => isSelected)
       .reduce((sum, [extraId]) => {
+        // support dynamic size add-ons encoded as `size_<Name>`
+        if (extraId.startsWith('size_')) {
+                      {/* Size-based add-ons (Half/Full) exposed here as extras */}
+                      {(item.sizes || [])
+                        .filter(s => ['half', 'full'].includes(((s.name || s.quantity) + '').toLowerCase()))
+                        .map(s => {
+                          const key = `size_${s.name || s.quantity}`
+                          const isSelected = !!selectedExtras[item.id]?.[key]
+                          const base = Number(item.price) || 0
+                          const amt = Math.max(0, (Number(s.price) || 0) - base)
+                          return (
+                            <button
+                              key={key}
+                              onClick={() => toggleExtra(item.id, key)}
+                              className={`rounded-lg border px-2 py-1.5 text-left text-[11px] font-semibold transition ${
+                                isSelected
+                                  ? 'border-orange-600 bg-orange-50 text-orange-700'
+                                  : 'border-gray-300 bg-white text-gray-600'
+                              }`}
+                            >
+                              <span className="block">{s.name || s.quantity}</span>
+                              <span className="block text-[10px] font-medium opacity-80">+₹{amt}</span>
+                            </button>
+                          )
+                        })}
+          const sizeName = extraId.slice(5)
+          const sizeObj = (item.sizes || []).find(s => (s.name || s.quantity || '').toString() === sizeName)
+          if (sizeObj) {
+            const base = Number(item.price) || 0
+            const add = Number(sizeObj.price) || 0
+            const diff = add - base
+            return sum + (diff > 0 ? diff : add)
+          }
+          return sum
+        }
         const extra = extrasOptions.find(e => e.id === extraId)
         return sum + (extra?.amount || 0)
       }, 0)
@@ -57,7 +93,7 @@ const Order = ({
 
   const getItemTotalPrice = (item) => {
     const sizeAddOn = getSizeAddOn(item.selectedSize)
-    const extrasAddOn = getItemExtrasTotal(item.id)
+    const extrasAddOn = getItemExtrasTotal(item)
     return (item.price + sizeAddOn + extrasAddOn) * item.quantity
   }
 
@@ -75,6 +111,12 @@ const Order = ({
     setCart(prevCart => prevCart.map(item => (
       item.id === itemId ? { ...item, selectedSize: sizeValue } : item
     )))
+    // also sync the menu-level size selection so menu buttons reflect this choice
+    try {
+      setSizeSelection(prev => ({ ...prev, [itemId]: sizeValue }))
+    } catch (e) {
+      // noop if parent didn't pass setSizeSelection
+    }
   }
 
   const toggleNoteEditor = (itemId) => {
@@ -185,14 +227,14 @@ const Order = ({
 
         // compute numeric add-on value so server can reconstruct price correctly
         const sizeAddOn = getSizeAddOn(item.selectedSize);
-        const extrasAddOn = getItemExtrasTotal(item.id);
+        const extrasAddOn = getItemExtrasTotal(item);
 
         return {
           id: item.id,
           name: item.name,
           quantity: item.quantity,
           selectedSize: item.selectedSize || 'regular',
-          price: item.price || 0,          // base unit price
+          price: item.price || 0,
           addOns: sizeAddOn + extrasAddOn,
           notes: parseInstructions(itemNotes[item.id])
         }

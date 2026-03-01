@@ -400,19 +400,24 @@ const Menu = () => {
                           Sizes: {item.sizes.map(s => `${s.name} ₹${s.price}`).join(', ')}
                         </p>
                         <div className="mt-1 mb-2 flex gap-2 text-xs">
-                          {item.sizes.map(sz => {
-                            const label = sz.name || sz.quantity || 'Size';
-                            const selected = sizeSelection[item.id] === label;
-                            return (
-                              <button
-                                key={label}
-                                onClick={() => setSizeSelection(prev => ({ ...prev, [item.id]: label }))}
-                                className={`px-2 py-1 rounded text-gray-700 border ${selected ? 'border-orange-600 bg-orange-50' : 'border-gray-300 bg-white'}`}
-                              >
-                                {label}
-                              </button>
-                            );
-                          })}
+                          {item.sizes
+                            .filter(sz => {
+                              const l = (sz.name || sz.quantity || '').toString().toLowerCase();
+                              return l !== 'half' && l !== 'full';
+                            })
+                            .map(sz => {
+                              const label = sz.name || sz.quantity || 'Size';
+                              const selected = sizeSelection[item.id] === label;
+                              return (
+                                <button
+                                  key={label}
+                                  onClick={() => setSizeSelection(prev => ({ ...prev, [item.id]: label }))}
+                                  className={`px-2 py-1 rounded text-gray-700 border ${selected ? 'border-orange-600 bg-orange-50' : 'border-gray-300 bg-white'}`}
+                                >
+                                  {label}
+                                </button>
+                              );
+                            })}
                         </div>
                       </>
                     )}
@@ -586,6 +591,8 @@ const Menu = () => {
         setCart={setCart}
         selectedExtras={selectedExtras}
         setSelectedExtras={setSelectedExtras}
+        sizeSelection={sizeSelection}
+        setSizeSelection={setSizeSelection}
       />
     </div>
   )
