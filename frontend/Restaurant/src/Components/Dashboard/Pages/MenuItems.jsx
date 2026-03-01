@@ -4,7 +4,16 @@ import {
   X, CheckCircle2, AlertCircle
 } from 'lucide-react';
 
-const getAutoCategoryImage = (name = '') => `https://loremflickr.com/160/160/${encodeURIComponent(name || 'food')},food`;
+import {
+  getMenuItems,
+  createMenuItem,
+  updateMenuItem,
+  deleteMenuItem,
+  createCategory,
+  getCategories,
+} from '../../../api/restaurantApi';
+
+
 const escapeSvgText = (value = '') => value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const getFallbackCategoryImage = (name = 'Food') => {
   const title = escapeSvgText((name || 'Food').slice(0, 16));
@@ -21,28 +30,9 @@ const MenuManagementPage = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [categories, setCategories] = useState([
-    { id: '1', name: 'Appetizers', itemCount: 3, image: '' },
-    { id: '2', name: 'Main Course', itemCount: 4, image: '' },
-    { id: '3', name: 'Desserts', itemCount: 3, image: '' },
-    { id: '4', name: 'Beverages', itemCount: 3, image: '' },
-  ]);
+  const [categories, setCategories] = useState([]);
 
-  const [items, setItems] = useState([
-    { id: '101', categoryId: '1', name: 'Garlic Bread', price: 6.99, description: 'Crispy baguette with garlic butter', available: true, foodType: 'veg' },
-    { id: '102', categoryId: '1', name: 'Chicken Wings', price: 12.99, description: 'Spicy buffalo or BBQ', available: true, foodType: 'nonveg' },
-    { id: '103', categoryId: '1', name: 'Bruschetta', price: 8.99, description: 'Tomato, basil, balsamic', available: false, foodType: 'veg' },
-    { id: '201', categoryId: '2', name: 'Classic Burger', price: 15.99, description: 'Beef patty, lettuce, tomato, fries', available: true, foodType: 'nonveg' },
-    { id: '202', categoryId: '2', name: 'Margherita Pizza', price: 14.99, description: 'Tomato, mozzarella, basil', available: true, foodType: 'veg' },
-    { id: '203', categoryId: '2', name: 'Grilled Salmon', price: 22.99, description: 'With lemon butter sauce', available: true, foodType: 'nonveg' },
-    { id: '204', categoryId: '2', name: 'Pasta Carbonara', price: 16.99, description: 'Creamy bacon & egg', available: true, foodType: 'nonveg' },
-    { id: '301', categoryId: '3', name: 'Lemon Tart', price: 7.99, description: 'Zesty lemon curd', available: true, foodType: 'veg' },
-    { id: '302', categoryId: '3', name: 'Chocolate Lava Cake', price: 8.99, description: 'Warm chocolate center', available: true, foodType: 'veg' },
-    { id: '303', categoryId: '3', name: 'Tiramisu', price: 7.99, description: 'Classic Italian dessert', available: false, foodType: 'veg' },
-    { id: '401', categoryId: '4', name: 'Soft Drinks', price: 2.99, description: 'Coke, Sprite, Fanta', available: true, foodType: 'veg' },
-    { id: '402', categoryId: '4', name: 'Craft Beer', price: 5.99, description: 'Local IPA', available: true, foodType: 'veg' },
-    { id: '403', categoryId: '4', name: 'House Wine', price: 7.99, description: 'Red or white', available: true, foodType: 'veg' },
-  ]);
+  const [items, setItems] = useState([]);
 
   const [categoryForm, setCategoryForm] = useState({ name: '', image: '' });
   const [itemForm, setItemForm] = useState({ name: '', price: '', description: '', available: true, foodType: 'veg' });
@@ -57,38 +47,137 @@ const MenuManagementPage = () => {
     }
   }, [categories, selectedCategory]);
 
-  const filteredItems = items.filter(item => 
-    item.categoryId === selectedCategory?.id && 
+  // fetch menu items from backend and build categories
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = await getMenuItems();
+        const menuItems = res.data.menuItems || [];
+        if (!mounted) return;
+        setItems(menuItems.map(mi => ({
+          id: mi._id,
+          categoryId: mi.category?._id,
+          name: mi.name,
+          price: (mi.sizes && mi.sizes[0]) ? mi.sizes[0].price : 0,
+          description: mi.description || '',
+          available: true,
+          foodType: 'veg',
+          sizes: mi.sizes || [],
+          raw: mi,
+        })));
+
+        // derive categories from populated category on menuItems
+        const cats = [];
+        const seen = new Set();
+        menuItems.forEach(mi => {
+          if (mi.category && !seen.has(String(mi.category._id))) {
+            seen.add(String(mi.category._id));
+            cats.push({ id: mi.category._id, name: mi.category.name, itemCount: 0, image: mi.category.picture || '' });
+          }
+        });
+        // count items per category
+        cats.forEach(c => {
+          c.itemCount = menuItems.filter(mi => mi.category && String(mi.category._id) === String(c.id)).length;
+        });
+        if (mounted) {
+          setCategories(cats);
+          if (cats.length > 0 && !selectedCategory) setSelectedCategory(cats[0]);
+        }
+      } catch (err) {
+        // errors handled by axios interceptor (toasts)
+      }
+    };
+    load();
+    return () => { mounted = false };
+  }, []);
+
+  // fetch all categories from backend (ensures categories created by restaurant appear)
+  useEffect(() => {
+    let mounted = true;
+    const loadCats = async () => {
+      try {
+        const res = await getCategories();
+        const cats = (res.data || []).map(c => ({ id: c._id, name: c.name, itemCount: 0, image: c.picture || '' }));
+        if (!mounted) return;
+        setCategories(prev => {
+          // merge server categories with any existing ones without duplicates
+          const map = {};
+          prev.forEach(p => { map[p.id] = p; });
+          cats.forEach(c => { map[c.id] = c; });
+          return Object.values(map);
+        });
+        if (!selectedCategory && cats.length > 0) setSelectedCategory(cats[0]);
+      } catch (e) {
+        // handled by interceptor
+      }
+    };
+    loadCats();
+    return () => { mounted = false };
+  }, []);
+
+  const filteredItems = items.filter(item =>
+    item.categoryId === selectedCategory?.id &&
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const saveCategory = () => {
+  const saveCategory = async () => {
     if (!categoryForm.name.trim()) return;
     const image = categoryForm.image.trim();
-    if (editingCategory) {
-      setCategories(categories.map(c => c.id === editingCategory.id ? { ...c, name: categoryForm.name, image } : c));
-    } else {
-      setCategories([...categories, { id: Date.now().toString(), name: categoryForm.name, itemCount: 0, image }]);
+    try {
+      const res = await createCategory({ name: categoryForm.name, picture: image });
+      const cat = res.data.category;
+      if (editingCategory) {
+        setCategories(categories.map(c => c.id === editingCategory.id ? { ...c, name: cat.name, image: cat.picture || '' } : c));
+      } else {
+        setCategories([...categories, { id: cat._id, name: cat.name, itemCount: 0, image: cat.picture || '' }]);
+      }
+      setShowCategoryModal(false);
+    } catch (err) {
+      // handled by interceptor (toast)
     }
-    setShowCategoryModal(false);
   };
 
-  const saveItem = () => {
-    if (!itemForm.name.trim() || !itemForm.price || !selectedCategory) return;
-    const newItem = {
-      id: editingItem ? editingItem.id : Date.now().toString(),
+  const saveItem = async () => {
+    if (!itemForm.name.trim() || !selectedCategory) return;
+    const finalSizes = (sizes && sizes.length > 0)
+      ? sizes.map(s => ({ name: s.quantity || s.name, price: parseFloat(s.price) || 0 }))
+      : [{ name: 'Regular', price: parseFloat(itemForm.price) || 0 }];
+
+    const payload = {
       categoryId: selectedCategory.id,
       name: itemForm.name,
-      price: parseFloat(itemForm.price),
+      sizes: finalSizes,
       description: itemForm.description,
       available: itemForm.available,
       foodType: itemForm.foodType,
-      sizes: sizes
     };
-    setItems(editingItem ? items.map(i => i.id === editingItem.id ? newItem : i) : [...items, newItem]);
-    setShowItemModal(false);
-    setSizes([]);
-    setNewSize({ quantity: '', price: '' });
+    try {
+      if (editingItem && editingItem.id) {
+        const res = await updateMenuItem(editingItem.id, payload);
+        const updated = res.data.updatedMenuItem || res.data.menuItem || res.data;
+        setItems(items.map(i => i.id === editingItem.id ? ({ ...i, name: updated.name, sizes: updated.sizes || [], raw: updated }) : i));
+      } else {
+        const res = await createMenuItem(payload);
+        const created = res.data.menuItem;
+        setItems([...items, {
+          id: created._id,
+          categoryId: created.category?._id,
+          name: created.name,
+          price: (created.sizes && created.sizes[0]) ? created.sizes[0].price : 0,
+          description: '',
+          available: true,
+          foodType: 'veg',
+          sizes: created.sizes || [],
+          raw: created,
+        }]);
+      }
+      setShowItemModal(false);
+      setSizes([]);
+      setNewSize({ quantity: '', price: '' });
+    } catch (err) {
+      // interceptor shows error toast
+    }
   };
 
   const addSize = () => {
@@ -99,7 +188,12 @@ const MenuManagementPage = () => {
   };
 
   const removeSize = (sizeId) => {
-    setSizes(sizes.filter(s => s.id !== sizeId));
+    setSizes(prev => prev.filter(s => {
+      const sid = s.id || s._id || '';
+      const sname = s.name || s.quantity || '';
+      const key = `${sname}-${s.price}`;
+      return !(sid === sizeId || sname === sizeId || key === sizeId);
+    }));
   };
 
   return (
@@ -115,9 +209,9 @@ const MenuManagementPage = () => {
 
             <div className="flex items-center gap-2 rounded-full border border-[#e6dfdc] bg-[#fdfbfa] px-4 py-2 w-full md:w-64">
               <Search size={16} className="text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search items..." 
+              <input
+                type="text"
+                placeholder="Search items..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-transparent text-sm outline-none flex-1 text-slate-700 placeholder-slate-400"
@@ -132,7 +226,7 @@ const MenuManagementPage = () => {
           <aside className="w-64 border-r border-[#e5deda] bg-[#f8f3f2] overflow-y-auto p-4 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-black uppercase tracking-widest text-slate-600">Categories</h2>
-              <button 
+              <button
                 onClick={() => { setEditingCategory(null); setCategoryForm({ name: '', image: '' }); setShowCategoryModal(true); }}
                 className="p-1.5 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-600 hover:text-white transition-all"
               >
@@ -145,11 +239,10 @@ const MenuManagementPage = () => {
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`w-full text-left p-3 rounded-lg transition-all border font-semibold text-sm ${
-                    selectedCategory?.id === cat.id
+                  className={`w-full text-left p-3 rounded-lg transition-all border font-semibold text-sm ${selectedCategory?.id === cat.id
                       ? 'bg-white border-orange-300 text-slate-900 shadow-md ring-1 ring-orange-200'
                       : 'bg-white border-[#e6dfdc] text-slate-700 hover:border-orange-300'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2.5">
                     <img
@@ -182,7 +275,7 @@ const MenuManagementPage = () => {
                     <h2 className="text-2xl font-black text-slate-900">{selectedCategory.name}</h2>
                     <p className="text-xs text-slate-500 mt-1">{filteredItems.length} items in this category</p>
                   </div>
-                  <button 
+                  <button
                     onClick={() => { setEditingItem(null); setItemForm({ name: '', price: '', description: '', available: true, foodType: 'veg' }); setSizes([]); setNewSize({ quantity: '', price: '' }); setShowItemModal(true); }}
                     className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest inline-flex items-center gap-2 transition-all"
                   >
@@ -199,14 +292,20 @@ const MenuManagementPage = () => {
                           ₹{item.price.toFixed(2)}
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
+                          <button
                             onClick={() => { setEditingItem(item); setItemForm({ name: item.name, price: item.price.toString(), description: item.description, available: item.available, foodType: item.foodType || 'veg' }); setSizes(item.sizes || []); setShowItemModal(true); }}
                             className="p-1.5 text-slate-400 hover:text-orange-600 transition-colors"
                           >
                             <Edit2 size={14} />
                           </button>
-                          <button 
-                            onClick={() => { if(window.confirm('Delete item?')) setItems(items.filter(i => i.id !== item.id)) }}
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm('Delete item?')) return;
+                              try {
+                                await deleteMenuItem(item.id);
+                                setItems(items.filter(i => i.id !== item.id));
+                              } catch (e) { }
+                            }}
                             className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors"
                           >
                             <Trash2 size={14} />
@@ -228,8 +327,8 @@ const MenuManagementPage = () => {
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Sizes</p>
                           <div className="grid grid-cols-2 gap-2">
                             {item.sizes.map((size) => (
-                              <div key={size.id} className="p-2 rounded-lg bg-slate-50 border border-[#eee6e3]">
-                                <p className="text-[10px] font-bold text-slate-600">{size.quantity}</p>
+                              <div key={size.id || size._id || `${(size.quantity||size.name)}-${size.price}`} className="p-2 rounded-lg bg-slate-50 border border-[#eee6e3]">
+                                <p className="text-[10px] font-bold text-slate-600">{size.quantity || size.name}</p>
                                 <p className="text-xs font-black text-orange-600">₹{size.price}</p>
                               </div>
                             ))}
@@ -243,13 +342,12 @@ const MenuManagementPage = () => {
                           <div className={`w-2 h-2 rounded-full ${item.available ? 'bg-emerald-500' : 'bg-slate-400'}`}></div>
                           <span className="text-[10px] font-black uppercase text-slate-500">{item.available ? 'Available' : 'Out'}</span>
                         </div>
-                        <button 
+                        <button
                           onClick={() => setItems(items.map(i => i.id === item.id ? { ...i, available: !i.available } : i))}
-                          className={`text-[10px] font-bold px-2 py-1 rounded transition-all ${
-                            item.available 
-                              ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' 
+                          className={`text-[10px] font-bold px-2 py-1 rounded transition-all ${item.available
+                              ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
                               : 'text-rose-600 bg-rose-50 hover:bg-rose-100'
-                          }`}
+                            }`}
                         >
                           {item.available ? 'Disable' : 'Enable'}
                         </button>
@@ -280,7 +378,7 @@ const MenuManagementPage = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-2xl max-h-[85vh] rounded-2xl border border-[#e3dcda] bg-[#fcfaf9] shadow-2xl overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="border-b border-[#e8dfdc] bg-[#f8f1ed] px-6 py-5 flex items-center justify-between flex-shrink-0">
+            <div className="border-b border-[#e8dfdc] bg-[#f8f1ed] px-6 py-5 flex items-center justify-between shrink-0">
               <div>
                 <h2 className="text-lg font-black text-slate-900">
                   {showCategoryModal ? '➕ Add/Edit Category' : '➕ Add/Edit Menu Item'}
@@ -295,17 +393,17 @@ const MenuManagementPage = () => {
             </div>
 
             {/* Content - Scrollable */}
-            <div className="overflow-y-auto flex-1 px-6 py-6 space-y-5 scrollbar scrollbar-thumb-orange-200 scrollbar-track-slate-100" style={{scrollbarWidth: 'thin', scrollbarColor: '#fed7aa #f1f5f9'}}>
+            <div className="overflow-y-auto flex-1 px-6 py-6 space-y-5 scrollbar scrollbar-thumb-orange-200 scrollbar-track-slate-100" style={{ scrollbarWidth: 'thin', scrollbarColor: '#fed7aa #f1f5f9' }}>
               {showCategoryModal ? (
                 <div className="space-y-4">
                   <div className="space-y-3">
                     <label className="text-xs font-black uppercase tracking-widest text-slate-700 block">Category Name *</label>
-                    <input 
-                      type="text" 
-                      value={categoryForm.name} 
-                      onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} 
-                      className="w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border border-[#e6dfdc] bg-white text-slate-900 font-medium" 
-                      placeholder="e.g. Main Course, Appetizers" 
+                    <input
+                      type="text"
+                      value={categoryForm.name}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border border-[#e6dfdc] bg-white text-slate-900 font-medium"
+                      placeholder="e.g. Main Course, Appetizers"
                       autoFocus
                     />
                   </div>
@@ -319,14 +417,13 @@ const MenuManagementPage = () => {
                       className="w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border border-[#e6dfdc] bg-white text-slate-900 font-medium"
                       placeholder="Paste image URL or leave empty"
                     />
-                    <p className="text-[11px] text-slate-500">Agar URL empty rahega to category name ke basis par auto food image show hogi.</p>
                   </div>
 
                   <div className="rounded-xl border border-[#e6dfdc] bg-white p-3">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mb-2">Preview</p>
                     <div className="flex items-center gap-3">
                       <img
-                        src={categoryForm.image?.trim() || getAutoCategoryImage(categoryForm.name)}
+                        src={categoryForm.image?.trim() || getFallbackCategoryImage(categoryForm.name)}
                         alt={categoryForm.name || 'Category preview'}
                         className="w-16 h-16 rounded-lg object-cover border border-[#e6dfdc]"
                         onError={(e) => {
@@ -345,12 +442,12 @@ const MenuManagementPage = () => {
                 <>
                   <div className="space-y-3">
                     <label className="text-xs font-black uppercase tracking-widest text-slate-700 block">Item Name *</label>
-                    <input 
-                      type="text" 
-                      value={itemForm.name} 
-                      onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} 
-                      className="w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border border-[#e6dfdc] bg-white text-slate-900 font-medium" 
-                      placeholder="e.g. Margherita Pizza" 
+                    <input
+                      type="text"
+                      value={itemForm.name}
+                      onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border border-[#e6dfdc] bg-white text-slate-900 font-medium"
+                      placeholder="e.g. Margherita Pizza"
                       autoFocus
                     />
                   </div>
@@ -386,21 +483,21 @@ const MenuManagementPage = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-3">
                       <label className="text-xs font-black uppercase tracking-widest text-slate-700 block">Price (₹) *</label>
-                      <input 
-                        type="number" 
-                        value={itemForm.price} 
-                        onChange={(e) => setItemForm({ ...itemForm, price: e.target.value })} 
-                        className="w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border border-[#e6dfdc] bg-white text-slate-900 font-medium" 
-                        placeholder="0.00" 
+                      <input
+                        type="number"
+                        value={itemForm.price}
+                        onChange={(e) => setItemForm({ ...itemForm, price: e.target.value })}
+                        className="w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border border-[#e6dfdc] bg-white text-slate-900 font-medium"
+                        placeholder="0.00"
                       />
                     </div>
                     <div className="space-y-3">
                       <label className="text-xs font-black uppercase tracking-widest text-slate-700 block">Status</label>
                       <label className="flex items-center gap-2 px-4 py-3 rounded-lg border border-[#e6dfdc] bg-white cursor-pointer hover:bg-slate-50 transition-all">
-                        <input 
-                          type="checkbox" 
-                          checked={itemForm.available} 
-                          onChange={(e) => setItemForm({ ...itemForm, available: e.target.checked })} 
+                        <input
+                          type="checkbox"
+                          checked={itemForm.available}
+                          onChange={(e) => setItemForm({ ...itemForm, available: e.target.checked })}
                           className="w-4 h-4 rounded text-orange-600 accent-orange-600"
                         />
                         <span className="text-xs font-bold text-slate-700">Active on Menu</span>
@@ -408,97 +505,87 @@ const MenuManagementPage = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-3">
-                    {/* <label className="text-xs font-black uppercase tracking-widest text-slate-700 block">Description</label>
-                    <textarea 
-                      value={itemForm.description} 
-                      onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })} 
-                      rows="3" 
-                      className="w-full px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 border border-[#e6dfdc] bg-white text-slate-900 font-medium resize-none" 
-                      placeholder="Brief description of the item..." 
-                    /> */}
-                  </div>
 
                   {/* Size Variants Section */}
                   {itemForm.name.trim() && (
-                  <div className="border-t border-[#eee6e3] pt-5 space-y-4">
-                    <div className="rounded-xl border border-orange-200 bg-linear-to-br from-orange-50 to-white p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">Size Variants</h3>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-orange-600">Optional</span>
-                      </div>
+                    <div className="border-t border-[#eee6e3] pt-5 space-y-4">
+                      <div className="rounded-xl border border-orange-200 bg-linear-to-br from-orange-50 to-white p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">Size Variants</h3>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-orange-600">Optional</span>
+                        </div>
 
-                      <div className="flex flex-wrap gap-2">
-                        {presetSizes.map((size) => (
-                          <button
-                            key={size}
-                            type="button"
-                            onClick={() => setNewSize({ ...newSize, quantity: size })}
-                            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${newSize.quantity === size ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-700 border-[#e6dfdc] hover:border-orange-300'}`}
-                          >
-                            {size}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-3">
-                        <input
-                          type="text"
-                          value={newSize.quantity}
-                          onChange={(e) => setNewSize({ ...newSize, quantity: e.target.value })}
-                          placeholder="Select or type size"
-                          className="w-full px-3 py-2.5 rounded-lg text-sm border border-[#e6dfdc] outline-none focus:ring-2 focus:ring-orange-500 bg-white text-slate-700 font-bold"
-                        />
-                        <input
-                          type="number"
-                          value={newSize.price}
-                          onChange={(e) => setNewSize({ ...newSize, price: e.target.value })}
-                          placeholder="Price"
-                          className="w-full px-3 py-2.5 rounded-lg text-sm border border-[#e6dfdc] outline-none focus:ring-2 focus:ring-orange-500 bg-white"
-                        />
-                        <button
-                          onClick={addSize}
-                          className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
-
-                    {sizes.length > 0 && (
-                      <div className="grid max-h-44 grid-cols-1 gap-2 overflow-y-auto rounded-xl border border-[#e6dfdc] bg-white p-2.5 sm:grid-cols-2" style={{scrollbarWidth: 'thin', scrollbarColor: '#fed7aa #f1f5f9'}}>
-                        {sizes.map((size) => (
-                          <div key={size.id} className="flex items-center justify-between rounded-lg border border-[#eee6e3] bg-slate-50 px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-                            <div className="min-w-0 pr-2">
-                              <p className="truncate text-xs font-black text-slate-900">{size.quantity}</p>
-                              <p className="text-[11px] font-black text-orange-600">₹{size.price}</p>
-                            </div>
-                            <button 
-                              onClick={() => removeSize(size.id)}
-                              className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600"
+                        <div className="flex flex-wrap gap-2">
+                          {presetSizes.map((size) => (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => setNewSize({ ...newSize, quantity: size })}
+                              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${newSize.quantity === size ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-700 border-[#e6dfdc] hover:border-orange-300'}`}
                             >
-                              <Trash2 size={14} />
+                              {size}
                             </button>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-3">
+                          <input
+                            type="text"
+                            value={newSize.quantity}
+                            onChange={(e) => setNewSize({ ...newSize, quantity: e.target.value })}
+                            placeholder="Select or type size"
+                            className="w-full px-3 py-2.5 rounded-lg text-sm border border-[#e6dfdc] outline-none focus:ring-2 focus:ring-orange-500 bg-white text-slate-700 font-bold"
+                          />
+                          <input
+                            type="number"
+                            value={newSize.price}
+                            onChange={(e) => setNewSize({ ...newSize, price: e.target.value })}
+                            placeholder="Price"
+                            className="w-full px-3 py-2.5 rounded-lg text-sm border border-[#e6dfdc] outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                          />
+                          <button
+                            onClick={addSize}
+                            className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
+                          >
+                            Add
+                          </button>
+                        </div>
                       </div>
-                    )}
-                  </div>
+
+                      {sizes.length > 0 && (
+                        <div className="grid max-h-44 grid-cols-1 gap-2 overflow-y-auto rounded-xl border border-[#e6dfdc] bg-white p-2.5 sm:grid-cols-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#fed7aa #f1f5f9' }}>
+                          {sizes.map((size) => (
+                            <div key={size.id || size._id || `${(size.quantity||size.name)}-${size.price}`} className="flex items-center justify-between rounded-lg border border-[#eee6e3] bg-slate-50 px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                              <div className="min-w-0 pr-2">
+                                <p className="truncate text-xs font-black text-slate-900">{size.quantity || size.name}</p>
+                                <p className="text-[11px] font-black text-orange-600">₹{size.price}</p>
+                              </div>
+                              <button
+                                onClick={() => removeSize(size.id || size.name || size.quantity || `${(size.name||size.quantity)}-${size.price}`)}
+                                className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </>
               )}
             </div>
 
             {/* Footer */}
-            <div className="border-t border-[#e8dfdc] bg-[#f8f5f3] px-6 py-4 flex gap-3 flex-shrink-0">
-              <button 
-                onClick={() => { setShowCategoryModal(false); setShowItemModal(false); }} 
+            <div className="border-t border-[#e8dfdc] bg-[#f8f5f3] px-6 py-4 flex gap-3 shrink-0">
+              <button
+                onClick={() => { setShowCategoryModal(false); setShowItemModal(false); }}
                 className="flex-1 px-4 py-3 border border-[#d8ccc3] text-slate-700 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all"
               >
                 Cancel
               </button>
-              <button 
-                onClick={showCategoryModal ? saveCategory : saveItem} 
+              <button
+                onClick={showCategoryModal ? saveCategory : saveItem}
                 className="flex-1 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-sm"
               >
                 Save

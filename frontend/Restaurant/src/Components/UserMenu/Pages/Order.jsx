@@ -193,7 +193,10 @@ const Order = ({
     }
 
     console.log('Order submitted:', orderPayload)
-    alert(`Order placed successfully for ${orderPayload.customer.name}!`)
+    try {
+      const ev = new CustomEvent('app-toast', { detail: { message: `Order placed successfully for ${orderPayload.customer.name}!`, type: 'success' } });
+      window.dispatchEvent(ev);
+    } catch (e) {}
     setCart([])
     setItemNotes({})
     setSelectedExtras({})
@@ -418,9 +421,9 @@ const Order = ({
       </div>
 
       {showCheckoutForm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="bg-gradient-to-r from-orange-600 to-orange-500 px-5 py-4 text-white">
+            <div className="bg-linear-to-r from-orange-600 to-orange-500 px-5 py-4 text-white">
               <h3 className="text-lg font-bold">Complete Your Order</h3>
               <p className="mt-1 text-sm text-white/90">Enter details to confirm your order</p>
             </div>

@@ -1,7 +1,7 @@
 const Restaurant = require('../models/Restaurant');
 const Category = require('../models/Category');
 const MenuItem = require('../models/MenuItem');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 //restaurant login
@@ -12,23 +12,91 @@ exports.login = async (req, res) => {
         if (!restaurant) {
             return res.status(404).json({ message: "Restaurant not found" });
         }
-        const isMatch = await restaurant.comparePassword(password);
+        // If restaurant plan/status is not active, deny login
+        if (restaurant.status && restaurant.status !== 'active') {
+            return res.status(403).json({ message: 'Your plan has expired. Contact the service provider for further details.' });
+        }
+        const isMatch = await bcrypt.compare(password, restaurant.password);
         if (!isMatch) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
-        const token = jwt.sign(
-            { id: restaurant._id }, 
-            process.env.JWT_SECRET, {
-                expiresIn: "1d"}
+        // ACCESS TOKEN (short-lived)
+        const accessToken = jwt.sign(
+            { id: restaurant._id, role: "restaurant" },
+            process.env.JWT_SECRET,
+            { expiresIn: "15m" }
         );
-        res.status(200).json({ 
+
+        // REFRESH TOKEN (long-lived)
+        const refreshToken = jwt.sign(
+            { id: restaurant._id },
+            process.env.JWT_REFRESH_SECRET,
+            { expiresIn: "7d" }
+        );
+
+        // send refresh token as httpOnly cookie and return access token
+        const refreshOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        };
+
+        res.cookie("refreshToken", refreshToken, refreshOptions);
+
+        res.status(200).json({
             message: "Login successful",
-            token,
+            accessToken,
         });
     } catch (error) {
         res.status(500).json({ message: "Server error" });
     }
 };
+
+    // REFRESH TOKEN
+    exports.refreshToken = (req, res) => {
+        try {
+            const token = req.cookies.refreshToken;
+
+            if (!token) {
+                return res.status(401).json({ message: "No refresh token" });
+            }
+
+            const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+
+            const accessToken = jwt.sign(
+                { id: decoded.id, role: "restaurant" },
+                process.env.JWT_SECRET,
+                { expiresIn: "15m" }
+            );
+
+            res.json({ accessToken });
+        } catch (error) {
+            res.status(403).json({ message: "Invalid refresh token" });
+        }
+    };
+
+    // LOGOUT
+    exports.logout = (req, res) => {
+        res.clearCookie("refreshToken");
+        res.clearCookie("accessToken");
+        res.json({ message: "Logged out successfully" });
+    };
+
+    // GET CURRENT RESTAURANT
+    exports.me = async (req, res) => {
+        try {
+            const userId = req.restaurant && req.restaurant.id;
+            if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+            const restaurant = await Restaurant.findById(userId).select('-password');
+            if (!restaurant) return res.status(404).json({ message: 'Restaurant not found' });
+
+            res.json({ restaurant });
+        } catch (error) {
+            res.status(500).json({ message: error.message });
+        }
+    };
 
 //get all categories
 
@@ -77,16 +145,22 @@ exports.deleteCategory = async (req, res) => {
 //create menu item
 exports.createMenuItem = async (req, res) => {
     try {
-        const {CategoryId, name, size} = req.body;
+        const { categoryId, name, sizes, available, foodType } = req.body;
 
         const restaurantId = req.restaurant.id;
-        const menuItem = new MenuItem.create({
+
+        const menuItemData = {
             restaurant: restaurantId,
-            category: CategoryId,
+            category: categoryId,
             name,
-            size,
-        });
-        res.status(201).json({ message: "Menu item created successfully", menuItem });
+            sizes: Array.isArray(sizes) ? sizes : [],
+            available: typeof available === 'boolean' ? available : true,
+            foodType: foodType || 'veg',
+        };
+
+        const menuItem = await MenuItem.create(menuItemData);
+        const populated = await menuItem.populate('category');
+        res.status(201).json({ message: "Menu item created successfully", menuItem: populated });
     } catch (error) {
         res.status(500).json({ message: "Server error" });
     }
@@ -112,10 +186,11 @@ exports.updateMenuItem = async (req, res) => {
             req.body,
             { new: true }
         );
-        if (!updatedMenuItem) {
-            return res.status(404).json({ message: "Menu item not found" });
-        }
-        res.status(200).json({ message: "Menu item updated successfully", updatedMenuItem });
+            if (!updatedMenuItem) {
+                return res.status(404).json({ message: "Menu item not found" });
+            }
+            const populated = await updatedMenuItem.populate('category');
+            res.status(200).json({ message: "Menu item updated successfully", updatedMenuItem: populated });
     } catch (error) {
         res.status(500).json({ message: "Server error" });
     }
@@ -126,7 +201,7 @@ exports.deleteMenuItem = async (req, res) => {
     try {
         const { id } = req.params;
         const restaurantId = req.restaurant.id;
-        const deletedMenuItem = await MenuItem.findByIdAndDelete({
+        const deletedMenuItem = await MenuItem.findOneAndDelete({
             _id: id,
             restaurant: restaurantId,
         });
@@ -136,6 +211,23 @@ exports.deleteMenuItem = async (req, res) => {
         res.status(200).json({ message: "Menu item deleted successfully" });
     } catch (error) {
         res.status(500).json({ message: "Server error" });
+    }
+};
+
+// create category (restaurant can create categories)
+exports.createCategory = async (req, res) => {
+    try {
+        const { name, picture } = req.body;
+        if (!name || !name.trim()) return res.status(400).json({ message: 'Category name is required' });
+        const existing = await Category.findOne({ name: name.trim() });
+        if (existing) return res.status(400).json({ message: 'Category already exists' });
+        const pic = picture && picture.trim() ? picture.trim() : 'https://via.placeholder.com/160';
+        const category = new Category({ name: name.trim(), picture: pic });
+        await category.save();
+        res.status(201).json({ message: 'Category created', category });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message || 'Server error' });
     }
 };
 

@@ -1,19 +1,28 @@
 import React, { useState } from "react";
+import { restaurantLogin } from "../../../api/restaurantApi";
 
 const Login = ({ onLogin }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log("Login attempted", { email, password });
-    // Navigate to dashboard after login
-    onLogin();
+    try {
+      const res = await restaurantLogin({ email, password });
+      const data = res.data;
+      if (data && data.accessToken) {
+        localStorage.setItem('token', data.accessToken);
+      }
+      onLogin();
+    } catch (err) {
+      // axios interceptor will emit error toast; log for debugging
+      // const message = err?.response?.data?.message || err.message || 'Login failed';
+      // console.error(message);
+    }
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-stone-800 to-stone-950 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="relative flex min-h-screen items-center justify-center bg-linear-to-br from-stone-800 to-stone-950 px-4 py-12 sm:px-6 lg:px-8">
       {/* Background Image with Overlay */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -128,7 +137,7 @@ const Login = ({ onLogin }) => {
           <div>
             <button
               type="submit"
-              className="group relative flex w-full justify-center rounded-lg bg-gradient-to-r from-amber-600 to-amber-700 px-4 py-3 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:from-amber-700 hover:to-amber-800 hover:shadow-lg focus:ring-2 focus:ring-amber-500/50 focus:outline-none"
+              className="group relative flex w-full justify-center rounded-lg bg-linear-to-r from-amber-600 to-amber-700 px-4 py-3 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:from-amber-700 hover:to-amber-800 hover:shadow-lg focus:ring-2 focus:ring-amber-500/50 focus:outline-none"
             >
               Sign in
             </button>

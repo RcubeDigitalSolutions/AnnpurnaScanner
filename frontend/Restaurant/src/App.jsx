@@ -9,18 +9,24 @@ import Settings from './Components/Dashboard/Pages/Settings'
 import Sidebar from './Components/Common/Sidebar'
 import Menu from './Components/UserMenu/Pages/Menu'
 import FloorPlanPage from './Components/Dashboard/Pages/FloorPlan'
+import { restaurantLogout, refreshToken } from './api/restaurantApi'
+import ToastContainer from './Components/Common/ToastContainer'
+import PlanExpiredModal from './Components/Common/PlanExpiredModal'
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [authChecked, setAuthChecked] = useState(false)
 
   return (
     <Router>
-      <AppRoutes isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />
+      <ToastContainer />
+      <PlanExpiredModal />
+      <AppRoutes isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} authChecked={authChecked} setAuthChecked={setAuthChecked} />
     </Router>
   )
 }
 
-const AppRoutes = ({ isLoggedIn, setIsLoggedIn }) => {
+const AppRoutes = ({ isLoggedIn, setIsLoggedIn, authChecked, setAuthChecked }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const navigate = useNavigate()
   const location = useLocation()
@@ -30,7 +36,44 @@ const AppRoutes = ({ isLoggedIn, setIsLoggedIn }) => {
     navigate('/admin/dashboard')
   }
 
-  const handleLogout = () => {
+  // attempt to refresh access token on app load if no local token
+  React.useEffect(() => {
+    let mounted = true;
+    const init = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        if (mounted) {
+          setIsLoggedIn(true);
+          setAuthChecked(true);
+        }
+        return;
+      }
+      try {
+        const res = await refreshToken();
+        const at = res.data && res.data.accessToken;
+        if (at) {
+          localStorage.setItem('token', at);
+          if (mounted) setIsLoggedIn(true);
+        } else {
+          if (mounted) setIsLoggedIn(false);
+        }
+      } catch (e) {
+        if (mounted) setIsLoggedIn(false);
+      } finally {
+        if (mounted) setAuthChecked(true);
+      }
+    };
+    init();
+    return () => { mounted = false };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await restaurantLogout();
+    } catch (err) {
+      // ignore errors, still clear client state
+    }
+    localStorage.removeItem('token');
     setIsLoggedIn(false)
     navigate('/login')
   }
@@ -52,6 +95,9 @@ const AppRoutes = ({ isLoggedIn, setIsLoggedIn }) => {
 
   // Protected Route Component
   const ProtectedRoute = ({ children }) => {
+    if (!authChecked) {
+      return <></>
+    }
     if (!isLoggedIn) {
       return <Navigate to="/login" replace />
     }
@@ -159,10 +205,10 @@ const AppRoutes = ({ isLoggedIn, setIsLoggedIn }) => {
         }
       />
 
-      {/* Catch all - redirect to home */}
+      {/* Catch all - redirect to home (wait until auth check completes) */}
       <Route 
         path="*" 
-        element={<Navigate to={isLoggedIn ? "/admin/dashboard" : "/login"} replace />} 
+        element={authChecked ? <Navigate to={isLoggedIn ? "/admin/dashboard" : "/login"} replace /> : <></>} 
       />
     </Routes>
   )

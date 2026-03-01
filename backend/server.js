@@ -23,6 +23,8 @@ app.use(
 
 // routes
 app.use("/api/admin", require("./routes/AdminRoutes"));
+// restaurant routes
+app.use("/api/restaurants", require("./routes/RestaurantRoutes"));
 
 
 // DB

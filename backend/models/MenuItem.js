@@ -16,6 +16,10 @@ const MenuItemSchema = new mongoose.Schema(
 
     name: { type: String, required: true, trim: true },
 
+    available: { type: Boolean, default: true },
+
+    foodType: { type: String, enum: ['veg', 'nonveg'], default: 'veg' },
+
     // Better: allow multiple sizes
     sizes: [
       {
