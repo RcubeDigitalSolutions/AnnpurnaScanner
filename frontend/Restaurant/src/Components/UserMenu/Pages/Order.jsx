@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { X, StickyNote, User, Phone } from 'lucide-react'
+import restaurantApi from '../../../api/restaurantApi'
 
 const sizeOptions = [
   { value: 'regular', label: 'Regular', addOn: 0 },
@@ -20,6 +21,7 @@ const extrasOptions = [
 const Order = ({
   cart,
   tableNumber,
+  restaurantId,
   showCartModal,
   setShowCartModal,
   removeFromCart,
@@ -162,7 +164,7 @@ const Order = ({
     return Object.keys(errors).length === 0
   }
 
-  const handleSubmitOrder = (e) => {
+  const handleSubmitOrder = async (e) => {
     e.preventDefault()
 
     if (!validateCustomerDetails()) {
@@ -170,6 +172,8 @@ const Order = ({
     }
 
     const orderPayload = {
+      restaurantId,
+      tableNumber,
       customer: {
         name: customerDetails.name.trim(),
         phone: customerDetails.phone.trim()
@@ -179,24 +183,32 @@ const Order = ({
           .filter(([_, isSelected]) => isSelected)
           .map(([extraId]) => extraId)
 
+        // compute numeric add-on value so server can reconstruct price correctly
+        const sizeAddOn = getSizeAddOn(item.selectedSize);
+        const extrasAddOn = getItemExtrasTotal(item.id);
+
         return {
           id: item.id,
           name: item.name,
           quantity: item.quantity,
           selectedSize: item.selectedSize || 'regular',
-          extras: selectedExtraIds,
-          notes: parseInstructions(itemNotes[item.id]),
-          lineTotal: getItemTotalPrice(item)
+          price: item.price || 0,          // base unit price
+          addOns: sizeAddOn + extrasAddOn,
+          notes: parseInstructions(itemNotes[item.id])
         }
       }),
       totalAmount: getTotalAmount()
     }
 
-    console.log('Order submitted:', orderPayload)
     try {
+      await restaurantApi.createOrder(orderPayload);
       const ev = new CustomEvent('app-toast', { detail: { message: `Order placed successfully for ${orderPayload.customer.name}!`, type: 'success' } });
       window.dispatchEvent(ev);
-    } catch (e) {}
+    } catch (e) {
+      console.error(e);
+      // error toast handled by interceptor
+    }
+
     setCart([])
     setItemNotes({})
     setSelectedExtras({})

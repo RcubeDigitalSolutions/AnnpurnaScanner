@@ -38,15 +38,22 @@ const OrderDetailsPanel = ({ isOpen, order, onClose, onUpdateStatus }) => {
 
   const actions = getStatusActions(order.status);
 
+  // normalize commonly used fields (backend/older callers may use different names)
+  const displayId = order.id || order._id || '';
+  const displayPhone = order.phone || order.phoneNumber || '';
+  const itemsList = order.items || [];
+  const getItemQty = (it) => (it.quantity ?? it.qty ?? 0);
+  const getItemSize = (it) => (it.size || it.selectedSize || 'Regular');
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-2xl max-h-[90vh] rounded-2xl border border-[#e3dcda] bg-[#fcfaf9] shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="border-b border-[#e8dfdc] bg-linear-to-r from-[#fff5f0] to-[#f8f1ed] px-6 py-4 flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1">
               <Hash size={16} className="text-orange-600" />
-              <h2 className="text-xl font-black text-slate-900">{order.id}</h2>
+              <h2 className="text-xl font-black text-slate-900">{displayId}</h2>
               <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase ${STATUS_BADGE_CLASS[order.status]}`}>
                 {STATUS_LABELS[order.status]}
               </span>
@@ -82,7 +89,7 @@ const OrderDetailsPanel = ({ isOpen, order, onClose, onUpdateStatus }) => {
                   <Phone size={16} className="text-sky-600 mt-0.5 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-[11px] font-semibold text-slate-500">Phone Number</p>
-                    <p className="text-[13px] font-black text-slate-900">{order.phone}</p>
+                    <p className="text-[13px] font-black text-slate-900">{displayPhone}</p>
                   </div>
                 </div>
 
@@ -93,17 +100,17 @@ const OrderDetailsPanel = ({ isOpen, order, onClose, onUpdateStatus }) => {
                   </div>
 
                   <div className="space-y-2">
-                    {(order.items || []).map((item, index) => (
+                    {itemsList.map((item, index) => (
                       <div key={`${item.name}-${index}`} className="rounded-lg border border-[#eee6e3] bg-white px-3 py-2">
                         <div className="flex items-center justify-between gap-2">
                           <p className="truncate text-[12px] font-black text-slate-900">{item.name}</p>
                           <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-black uppercase text-slate-600">
-                            {item.size || 'Regular'}
+                            {getItemSize(item)}
                           </span>
                         </div>
                         <div className="mt-1 flex items-center justify-between text-[10px] font-bold text-slate-500">
                           <span>Qty</span>
-                          <span className="text-orange-600">{item.qty}</span>
+                          <span className="text-orange-600">{getItemQty(item)}</span>
                         </div>
                       </div>
                     ))}
@@ -115,7 +122,7 @@ const OrderDetailsPanel = ({ isOpen, order, onClose, onUpdateStatus }) => {
                     <div className="rounded-lg bg-[#f8f5f3] px-3 py-2">
                       <p className="text-[10px] font-semibold text-slate-500">Total Quantity</p>
                       <p className="text-[16px] font-black text-orange-600">
-                        {(order.items || []).reduce((sum, item) => sum + (item.qty || 0), 0)}
+                        {itemsList.reduce((sum, item) => sum + getItemQty(item), 0)}
                       </p>
                     </div>
                     <div className="rounded-lg bg-[#f8f5f3] px-3 py-2">

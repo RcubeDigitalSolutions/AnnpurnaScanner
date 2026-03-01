@@ -194,15 +194,13 @@ const AppRoutes = ({ isLoggedIn, setIsLoggedIn, authChecked, setAuthChecked }) =
         } 
       />
 
-      {/* Default Route - Redirect to login or admin based on auth status */}
-      <Route 
-        path="/" 
-        element={
-       
-          
-              <Menu />
-           
-        }
+      {/* Public menu route (restaurant guest) */}
+      <Route path="/menu/:restaurantId/:tableNumber" element={<Menu />} />
+
+      {/* Default Route - send user to login (not the menu) */}
+      <Route
+        path="/"
+        element={<Navigate to="/login" replace />}
       />
 
       {/* Catch all - redirect to home (wait until auth check completes) */}

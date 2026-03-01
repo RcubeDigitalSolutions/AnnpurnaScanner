@@ -1,5 +1,6 @@
 const Restaurant = require("../models/Restaurant");
 const MenuItem = require("../models/MenuItem");
+const Order = require("../models/Order");
 
 //get all restaurants
 exports.getAllRestaurants = async (req, res) => {
@@ -47,6 +48,80 @@ exports.getMenuItemsSortedByCategory = async (req, res) => {
 
         res.status(200).json({ items });
     } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// public endpoint for menu items of a specific restaurant
+exports.getRestaurantMenu = async (req, res) => {
+    try {
+        const { restaurantId } = req.params;
+        let menuItems = await MenuItem.find({ restaurant: restaurantId }).populate('category');
+        // convert to plain objects and make sure price field exists
+        menuItems = menuItems.map(mi => {
+            const obj = mi.toObject();
+            if (typeof obj.price !== 'number' || obj.price === 0) {
+                obj.price = (obj.sizes && obj.sizes[0] ? obj.sizes[0].price : 0);
+            }
+            return obj;
+        });
+        res.status(200).json({ menuItems });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// public restaurant information (name etc.)
+exports.getRestaurantInfo = async (req, res) => {
+    try {
+        const { restaurantId } = req.params;
+        const rest = await Restaurant.findById(restaurantId).select('name');
+        if (!rest) return res.status(404).json({ message: 'Restaurant not found' });
+        res.status(200).json({ restaurant: rest });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// create order from user side
+exports.createOrder = async (req, res) => {
+    try {
+        const { restaurantId, tableNumber, customer, items, totalAmount } = req.body;
+        if (!restaurantId || !tableNumber || !customer || !items || !totalAmount) {
+            return res.status(400).json({ message: "Missing order data" });
+        }
+        // ensure numeric values are properly parsed and validated
+        const parsedTable = Number(tableNumber);
+        if (isNaN(parsedTable)) {
+            return res.status(400).json({ message: 'Invalid table number' });
+        }
+        const parsedTotal = Number(totalAmount);
+        if (isNaN(parsedTotal)) {
+            return res.status(400).json({ message: 'Invalid total amount' });
+        }
+        const orderData = {
+            restaurant: restaurantId,
+            tableNumber: parsedTable,
+            customerName: customer.name,
+            phoneNumber: customer.phone,
+            items: items.map(i => ({
+                name: i.name,
+                size: i.selectedSize || 'regular',
+                // price plus any add ons; guard against NaN
+                price: (() => {
+                    const base = Number(i.price) || 0;
+                    const addOn = Number(i.addOns) || 0;
+                    return base + addOn;
+                })(),
+                quantity: i.quantity,
+            })),
+            totalPrice: parsedTotal,
+        };
+        const order = await Order.create(orderData);
+        res.status(201).json({ order, message: 'Order placed successfully' });
+    } catch (error) {
+        // log error to console for debugging
+        console.error('createOrder error:', error);
         res.status(500).json({ message: "Server error" });
     }
 };

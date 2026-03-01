@@ -63,10 +63,10 @@ const MenuManagementPage = () => {
           id: mi._id,
           categoryId: mi.category?._id,
           name: mi.name,
-          price: (mi.sizes && mi.sizes[0]) ? mi.sizes[0].price : 0,
+          price: typeof mi.price === 'number' ? mi.price : ((mi.sizes && mi.sizes[0]) ? mi.sizes[0].price : 0),
           description: mi.description || '',
-          available: true,
-          foodType: 'veg',
+          available: typeof mi.available === 'boolean' ? mi.available : true,
+          foodType: mi.foodType || 'veg',
           sizes: mi.sizes || [],
           raw: mi,
         })));
@@ -129,8 +129,9 @@ const MenuManagementPage = () => {
     const payload = {
       categoryId: selectedCategory.id,
       name: itemForm.name,
-      sizes: finalSizes,
       description: itemForm.description,
+      price: parseFloat(itemForm.price) || 0,
+      sizes: finalSizes,
       available: itemForm.available,
       foodType: itemForm.foodType,
     };
@@ -138,7 +139,16 @@ const MenuManagementPage = () => {
       if (editingItem && editingItem.id) {
         const res = await updateMenuItem(editingItem.id, payload);
         const updated = res.data.updatedMenuItem || res.data.menuItem || res.data;
-        setItems(items.map(i => i.id === editingItem.id ? ({ ...i, name: updated.name, sizes: updated.sizes || [], raw: updated }) : i));
+        setItems(items.map(i => i.id === editingItem.id ? ({
+          ...i,
+          name: updated.name,
+          price: typeof updated.price==='number' ? updated.price : (updated.sizes && updated.sizes[0] ? updated.sizes[0].price : i.price),
+          description: updated.description || i.description,
+          available: updated.available !== undefined ? updated.available : i.available,
+          foodType: updated.foodType || i.foodType,
+          sizes: updated.sizes || [],
+          raw: updated,
+        }) : i));
       } else {
         const res = await createMenuItem(payload);
         const created = res.data.menuItem;
@@ -146,10 +156,10 @@ const MenuManagementPage = () => {
           id: created._id,
           categoryId: created.category?._id,
           name: created.name,
-          price: (created.sizes && created.sizes[0]) ? created.sizes[0].price : 0,
-          description: '',
-          available: true,
-          foodType: 'veg',
+          price: typeof created.price === 'number' ? created.price : ((created.sizes && created.sizes[0]) ? created.sizes[0].price : 0),
+          description: created.description || '',
+          available: typeof created.available === 'boolean' ? created.available : true,
+          foodType: created.foodType || 'veg',
           sizes: created.sizes || [],
           raw: created,
         }]);
@@ -275,7 +285,7 @@ const MenuManagementPage = () => {
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
-                            onClick={() => { setEditingItem(item); setItemForm({ name: item.name, price: item.price.toString(), description: item.description, available: item.available, foodType: item.foodType || 'veg' }); setSizes(item.sizes || []); setShowItemModal(true); }}
+                            onClick={() => { setEditingItem(item); setItemForm({ name: item.name, price: (item.price||'').toString(), description: item.description, available: item.available, foodType: item.foodType || 'veg' }); setSizes(item.sizes || []); setShowItemModal(true); }}
                             className="p-1.5 text-slate-400 hover:text-orange-600 transition-colors"
                           >
                             <Edit2 size={14} />

@@ -1,12 +1,21 @@
 import React, { useEffect, useState } from 'react'
+import { useParams, Navigate } from 'react-router-dom'
 import { Search, ChevronDown, ChevronUp, Home as HomeIcon, UtensilsCrossed, ClipboardList, Receipt, Users, X } from 'lucide-react'
 import Order from './Order'
+import restaurantApi from '../../../api/restaurantApi'
 
 const Menu = () => {
-  const tableNumber = '15'
+  const { restaurantId, tableNumber: tableParam } = useParams()
+  if (!restaurantId || !tableParam) {
+    return <Navigate to="/" replace />
+  }
+  const tableNumber = tableParam || ''
   const [cart, setCart] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('Napoli Fold Sandwich')
+  const [restaurantInfo, setRestaurantInfo] = useState(null)
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [showCartModal, setShowCartModal] = useState(false)
   const [expandedItems, setExpandedItems] = useState({})
   const [itemNotes, setItemNotes] = useState({})
@@ -16,110 +25,72 @@ const Menu = () => {
   const [showMiniCart, setShowMiniCart] = useState(true)
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false)
 
-  // Sample menu data - Replace with API call later
-  const menuItems = [
-    {
-      id: 1,
-      name: 'Chicken & Pesto',
-      category: 'Napoli Fold Sandwich',
-      price: 299,
-      description: 'Warm Panuzzo Stuffed With Herb Marinated Grilled Chicken, Pesto, Goat Cheese, Sun Dried Tomatoes, Olives & Rocca Leaves',
-      image: 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=400',
-      veg: false
-    },
-    {
-      id: 2,
-      name: 'Pesto & Cream Cheese',
-      category: 'Napoli Fold Sandwich',
-      price: 269,
-      description: 'Soft Crispy Panozoo Stuffed With Chipotle Marinated Grilled Cottage Cheese, Olives, Sweet Corn, Pesto & Cheese',
-      image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',
-      veg: true
-    },
-    {
-      id: 3,
-      name: 'Chipotle Cottage Cheese',
-      category: 'Napoli Fold Sandwich',
-      price: 269,
-      description: 'Soft Crispy Panozoo Stuffed With Chipotle Marinated Cottage Cheese & Fresh Vegetables',
-      image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',
-      veg: true
-    },
-    {
-      id: 4,
-      name: 'Grilled Peri Peri Chicken',
-      category: 'Napoli Fold Sandwich',
-      price: 299,
-      description: 'Tender Grilled Chicken With Our House Made Peri Peri Sauce',
-      image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',
-      veg: false
-    },
-    {
-      id: 5,
-      name: 'Avocado Toast',
-      category: 'Taste The Trends',
-      price: 369,
-      description: 'Fresh Avocado Mash On Toasted Sourdough Bread',
-      image: 'https://images.unsplash.com/photo-1589301773859-2e3cf8a35295?w=400',
-      veg: true
-    },
-    {
-      id: 6,
-      name: 'Cold Coffee',
-      category: 'Coolers',
-      price: 180,
-      description: 'Refreshing Cold Coffee With Ice Cream',
-      image: 'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=400',
-      veg: true
-    }
-  ]
+  // menu data fetched from server
+  const [menuItems, setMenuItems] = useState([])
 
-  const categories = [
-    { name: 'Napoli Fold Sandwich', image: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=100' },
-    { name: 'Taste The Trends', image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100' },
-    { name: 'Coolers', image: 'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=100' },
-    { name: 'Byd Summer', image: 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=100' },
-    { name: 'Salads', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=100' }
-  ]
+  const [categories, setCategories] = useState([])
+  // track user-selected size option for items with multiple choices
+  const [sizeSelection, setSizeSelection] = useState({})
+
+  // compute price helper (taking selected size into account)
+  const getItemPrice = (item) => {
+    const selected = sizeSelection[item.id];
+    if (selected && item.sizes) {
+      const sizeObj = item.sizes.find(s => s.name === selected || s.quantity === selected);
+      if (sizeObj && typeof sizeObj.price === 'number') return sizeObj.price;
+    }
+    if (typeof item.price === 'number' && item.price > 0) return item.price;
+    if (item.sizes && item.sizes.length > 0) return item.sizes[0].price;
+    return 0;
+  };
 
   const filteredItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = item.category === selectedCategory
+    const matchesCategory = selectedCategory === 'All' || item.category.name === selectedCategory
     return matchesSearch && matchesCategory
   })
 
-  const addToCart = (item) => {
-    const existingItem = cart.find(cartItem => cartItem.id === item.id)
+  const addToCart = (item, sizeKeyOverride) => {
+    const sizeKey = sizeKeyOverride || sizeSelection[item.id] || item.selectedSize || 'regular';
+    const price = getItemPrice({ ...item, selectedSize: sizeKey });
+    const existingItem = cart.find(cartItem => cartItem.id === item.id && cartItem.selectedSize === sizeKey)
     if (existingItem) {
       setCart(cart.map(cartItem => 
-        cartItem.id === item.id 
+        cartItem.id === item.id && cartItem.selectedSize === sizeKey
           ? {
               ...cartItem,
               quantity: cartItem.quantity + 1,
-              selectedSize: item.selectedSize || cartItem.selectedSize || 'regular'
+              price,
             }
           : cartItem
       ))
     } else {
-      setCart([...cart, { ...item, quantity: 1, selectedSize: item.selectedSize || 'regular' }])
+      setCart([...cart, { ...item, quantity: 1, selectedSize: sizeKey, price }])
     }
   }
 
-  const removeFromCart = (itemId) => {
-    const existingItem = cart.find(cartItem => cartItem.id === itemId)
+  const removeFromCart = (itemId, sizeKeyOverride) => {
+    const sizeKey = sizeKeyOverride || sizeSelection[itemId] || 'regular';
+    const existingItem = cart.find(cartItem => cartItem.id === itemId && cartItem.selectedSize === sizeKey);
+    if (!existingItem) return;
     if (existingItem.quantity === 1) {
-      setCart(cart.filter(cartItem => cartItem.id !== itemId))
+      setCart(cart.filter(cartItem => !(cartItem.id === itemId && cartItem.selectedSize === sizeKey)));
     } else {
       setCart(cart.map(cartItem => 
-        cartItem.id === itemId 
+        cartItem.id === itemId && cartItem.selectedSize === sizeKey
           ? { ...cartItem, quantity: cartItem.quantity - 1 }
           : cartItem
-      ))
+      ));
     }
   }
 
-  const getItemQuantity = (itemId) => {
-    const item = cart.find(cartItem => cartItem.id === itemId)
+  const getItemQuantity = (itemId, itemName) => {
+    const sizeKey = sizeSelection[itemId] || 'regular';
+    const item = cart.find(cartItem =>
+      cartItem.id === itemId &&
+      cartItem.selectedSize === sizeKey &&
+      (!itemName || cartItem.name === itemName)
+    );
     return item ? item.quantity : 0
   }
 
@@ -214,6 +185,80 @@ const Menu = () => {
     }
   }, [cart.length])
 
+  // fetch menu from server when restaurantId is available
+  useEffect(() => {
+    if (!restaurantId) return;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [menuRes, infoRes] = await Promise.all([
+          restaurantApi.getPublicMenu(restaurantId),
+          restaurantApi.getRestaurantInfo(restaurantId)
+        ]);
+        if (!infoRes.data.restaurant) {
+          setError('Restaurant not found');
+          return;
+        }
+        let items = menuRes.data.menuItems || [];
+        // normalize each item: assign unique id, ensure price and flags
+        items = items.map((i, idx) => {
+          const baseId = i._id || i.id || '';
+          const uniqueId = `${restaurantId}-${baseId}-${idx}`;
+          const obj = { ...i, id: uniqueId };
+          if (typeof obj.price !== 'number' || obj.price === 0) {
+            obj.price = (obj.sizes && obj.sizes[0] ? obj.sizes[0].price : 0);
+          }
+          obj.veg = obj.foodType !== 'nonveg';
+          if (typeof obj.available !== 'boolean') obj.available = true;
+          return obj;
+        });
+        setMenuItems(items);
+        // compute categories from items, preserving images when available
+        const catMap = {};
+        items.forEach(i => {
+          const cname = i.category?.name;
+          if (cname) {
+            if (!catMap[cname]) {
+              catMap[cname] = { name: cname, image: i.category?.picture || '' };
+            }
+          }
+        });
+        let cats = Object.values(catMap);
+        cats = [{ name: 'All', image: '' }, ...cats];
+        setCategories(cats);
+        if (!selectedCategory) {
+          if (cats.length === 2) {
+            setSelectedCategory(cats[1].name);
+          } else {
+            setSelectedCategory('All');
+          }
+        }
+        setRestaurantInfo(infoRes.data.restaurant);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [restaurantId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Loading menu, please wait...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
@@ -226,7 +271,7 @@ const Menu = () => {
                 <UtensilsCrossed className="h-5 w-5 text-white sm:h-6 sm:w-6" />
               </div>
               <div className="min-w-0">
-                <h1 className="truncate text-sm font-bold text-gray-900 sm:text-lg">Big Yellow Door</h1>
+                <h1 className="truncate text-sm font-bold text-gray-900 sm:text-lg">{restaurantInfo?.name || 'Restaurant'}</h1>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -276,16 +321,16 @@ const Menu = () => {
                     ? 'border-orange-500'
                     : 'border-gray-200'
                 }`}>
-                  {index === 0 ? (
-                    <div className="flex h-full w-full items-center justify-center bg-gray-100">
-                      <UtensilsCrossed className="h-8 w-8 text-orange-500" />
-                    </div>
-                  ) : (
+                  {category.image ? (
                     <img 
                       src={category.image} 
                       alt={category.name}
                       className="h-full w-full object-cover"
                     />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                      <UtensilsCrossed className="h-8 w-8 text-orange-500" />
+                    </div>
                   )}
                   {selectedCategory === category.name && (
                     <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500">
@@ -346,13 +391,37 @@ const Menu = () => {
                   {/* Item Name and Price */}
                   <div className="mb-1">
                     <h3 className="text-base font-semibold text-gray-900">{item.name}</h3>
-                    <p className="mt-0.5 text-base font-semibold text-gray-900">₹ {item.price}.00</p>
+                    <p className="mt-0.5 text-base font-semibold text-gray-900">
+                      ₹ {getItemPrice(item)}.00 {item.available ? '' : '(Unavailable)'}
+                    </p>
+                    {item.sizes && item.sizes.length > 1 && (
+                      <>
+                        <p className="mt-1 text-sm text-gray-500">
+                          Sizes: {item.sizes.map(s => `${s.name} ₹${s.price}`).join(', ')}
+                        </p>
+                        <div className="mt-1 mb-2 flex gap-2 text-xs">
+                          {item.sizes.map(sz => {
+                            const label = sz.name || sz.quantity || 'Size';
+                            const selected = sizeSelection[item.id] === label;
+                            return (
+                              <button
+                                key={label}
+                                onClick={() => setSizeSelection(prev => ({ ...prev, [item.id]: label }))}
+                                className={`px-2 py-1 rounded text-gray-700 border ${selected ? 'border-orange-600 bg-orange-50' : 'border-gray-300 bg-white'}`}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Description */}
                   <div className="mb-2">
                     <p className="text-sm text-gray-500">
-                      {expandedItems[item.id] ? item.description : truncateText(item.description)}
+                      {expandedItems[item.id] ? item.description : truncateText(item.description || '')}
                       {item.description.split(' ').length > 8 && (
                         <button
                           onClick={() => toggleReadMore(item.id)}
@@ -367,12 +436,13 @@ const Menu = () => {
 
                 {/* Right-side Add/Quantity Controls */}
                 <div className="flex w-24 flex-shrink-0 items-start justify-end">
-                  {getItemQuantity(item.id) === 0 ? (
+                  {getItemQuantity(item.id, item.name) === 0 ? (
                     <button
                       onClick={() => addToCart(item)}
-                      className="rounded-xl bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white shadow-lg transition hover:bg-orange-500"
+                      disabled={!item.available}
+                      className={`rounded-xl px-4 py-1.5 text-sm font-semibold text-white shadow-lg transition ${item.available ? 'bg-orange-600 hover:bg-orange-500' : 'bg-gray-300 cursor-not-allowed'}`}
                     >
-                      + Add
+                      {item.available ? '+ Add' : 'Unavailable'}
                     </button>
                   ) : (
                     <div className="inline-flex items-center gap-3 rounded-lg border-2 border-orange-600 px-3 py-1">
@@ -383,7 +453,7 @@ const Menu = () => {
                         −
                       </button>
                       <span className="min-w-[20px] text-center text-sm font-semibold text-orange-600">
-                        {getItemQuantity(item.id)}
+                        {getItemQuantity(item.id, item.name)}
                       </span>
                       <button
                         onClick={() => addToCart(item)}
@@ -400,7 +470,7 @@ const Menu = () => {
 
           {filteredItems.length === 0 && (
             <div className="py-12 text-center">
-              <p className="text-base text-gray-500">No items found</p>
+              <p className="text-base text-gray-500">No menu items available. Please check back later or contact the restaurant.</p>
             </div>
           )}
         </main>
@@ -503,6 +573,7 @@ const Menu = () => {
 
       <Order
         cart={cart}
+        restaurantId={restaurantId}
         tableNumber={tableNumber}
         showCartModal={showCartModal}
         setShowCartModal={setShowCartModal}

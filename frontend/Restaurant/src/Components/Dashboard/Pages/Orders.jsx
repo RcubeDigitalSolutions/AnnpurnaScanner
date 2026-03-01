@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { CheckCircle2, Eye, Play, Search, XCircle } from 'lucide-react';
 import OrderDetailsPanel from './OrderDetailsPanel';
+import restaurantApi from '../../../api/restaurantApi';
 
 const BOARD_COLUMNS = [
   {
@@ -34,169 +35,45 @@ const BOARD_COLUMNS = [
 ];
 
 const Orders = () => {
-  const [orders, setOrders] = useState([
-    {
-      id: '#35345',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-05',
-      status: 'pending',
-      items: [
-        { name: 'Chicken and Vegetable Bowl', size: 'Full', qty: 1 },
-        { name: 'Creamy Tomato Soup', size: '250ml', qty: 1 }
-      ]
-    },
-    {
-      id: '#35346',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-03',
-      status: 'pending',
-      items: [
-        { name: 'Beef and Broccoli Stir Fry', size: 'Full', qty: 2 }
-      ]
-    },
-    {
-      id: '#35347',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-07',
-      status: 'pending',
-      items: [
-        { name: 'Roasted Chicken with Cheese', size: 'Half', qty: 1 },
-        { name: 'Stuffed Bell Peppers', size: 'Full', qty: 1 }
-      ]
-    },
-    {
-      id: '#35348',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-02',
-      status: 'pending',
-      items: [
-        { name: 'Stuffed Bell Peppers', size: 'Full', qty: 2 }
-      ]
-    },
-    {
-      id: '#35349',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-09',
-      status: 'accepted',
-      items: [
-        { name: 'Shrimp Scampi with Linguine', size: 'Full', qty: 1 },
-        { name: 'Creamy Garlic Mushroom Pasta', size: 'Half', qty: 1 }
-      ]
-    },
-    {
-      id: '#35350',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-01',
-      status: 'accepted',
-      items: [
-        { name: 'Vegetable Lasagna', size: 'Full', qty: 2 }
-      ]
-    },
-    {
-      id: '#35351',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-04',
-      status: 'ongoing',
-      items: [
-        { name: 'Baked Potato Bar', size: 'Full', qty: 2 }
-      ]
-    },
-    {
-      id: '#35352',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-06',
-      status: 'ongoing',
-      items: [
-        { name: 'Chicken Alfredo with Broccoli', size: 'Full', qty: 2 }
-      ]
-    },
-    {
-      id: '#35353',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-08',
-      status: 'ongoing',
-      items: [
-        { name: 'Chicken and Vegetable Pasta', size: 'Full', qty: 2 }
-      ]
-    },
-    {
-      id: '#35355',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-10',
-      status: 'completed',
-      items: [
-        { name: 'Baked Ziti with Meat Sauce', size: 'Full', qty: 1 },
-        { name: 'Honey Mustard Glazed Salmon', size: 'Full', qty: 1 }
-      ]
-    },
-    {
-      id: '#35356',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-12',
-      status: 'completed',
-      items: [
-        { name: 'Homemade Macaroni and Cheese', size: 'Full', qty: 2 }
-      ]
-    },
-    {
-      id: '#35357',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-11',
-      status: 'completed',
-      items: [
-        { name: 'Slow Cooker Beef and Veggies', size: 'Full', qty: 2 }
-      ]
-    },
-    {
-      id: '#35358',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-13',
-      status: 'completed',
-      items: [
-        { name: 'Honey Mustard Glazed Salmon', size: 'Full', qty: 2 }
-      ]
-    },
-    {
-      id: '#35359',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-14',
-      status: 'completed',
-      items: [
-        { name: 'Creamy Garlic Mushroom Pasta', size: 'Half', qty: 2 }
-      ]
-    },
-    {
-      id: '#35360',
-      customerName: 'Ankit Gojera',
-      phone: '9923444555',
-      tableNo: 'T-15',
-      status: 'completed',
-      items: [
-        { name: 'Creamy Tomato Soup', size: '500ml', qty: 2 }
-      ]
-    }
-  ]);
+  const [orders, setOrders] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState('');
+
+  // load orders from backend on mount
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = await restaurantApi.getOrders();
+        if (!mounted) return;
+        const mapped = (res.data.orders || []).map(o => ({
+          id: o._id,
+          customerName: o.customerName,
+          phone: o.phoneNumber,
+          tableNo: `T-${o.tableNumber}`,
+          status: o.status,
+          items: (o.items || []).map(i => ({ name: i.name, size: i.size, qty: i.quantity })),
+        }));
+        setOrders(mapped);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, []);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  const updateOrderStatus = (orderId, nextStatus) => {
-    setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: nextStatus } : order)));
+  const updateOrderStatus = async (orderId, nextStatus) => {
+    try {
+      await restaurantApi.updateOrderStatus(orderId, { status: nextStatus });
+      setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: nextStatus } : order)));
+      setSelectedOrder((prev) => (prev?.id === orderId ? { ...prev, status: nextStatus } : prev));
+    } catch (err) {
+      console.error(err);
+      // error toast handled by interceptor
+    }
   };
 
   const getPrimaryAction = (status) => {
@@ -231,9 +108,14 @@ const Orders = () => {
     return grouped;
   }, [filteredOrders]);
 
-  const cancelOrder = (orderId) => {
-    setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: 'cancelled' } : order)));
-    setSelectedOrder((prev) => (prev?.id === orderId ? { ...prev, status: 'cancelled' } : prev));
+  const cancelOrder = async (orderId) => {
+    try {
+      await restaurantApi.updateOrderStatus(orderId, { status: 'cancelled' });
+      setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: 'cancelled' } : order)));
+      setSelectedOrder((prev) => (prev?.id === orderId ? { ...prev, status: 'cancelled' } : prev));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const getThumbBg = (status) => {

@@ -147,7 +147,7 @@ exports.deleteCategory = async (req, res) => {
 //create menu item
 exports.createMenuItem = async (req, res) => {
     try {
-        const { categoryId, name, sizes, available, foodType } = req.body;
+        const { categoryId, name, description, price, sizes, available, foodType } = req.body;
 
         const restaurantId = req.restaurant.id;
 
@@ -155,6 +155,8 @@ exports.createMenuItem = async (req, res) => {
             restaurant: restaurantId,
             category: categoryId,
             name,
+            description: description || '',
+            price: typeof price === 'number' ? price : 0,
             sizes: Array.isArray(sizes) ? sizes : [],
             available: typeof available === 'boolean' ? available : true,
             foodType: foodType || 'veg',
@@ -183,16 +185,35 @@ exports.getMenuItems = async (req, res) => {
 exports.updateMenuItem = async (req, res) => {
     try {
         const { id } = req.params;
+        // only allow certain fields to be updated for safety
+        const updateData = {};
+        [
+          'name',
+          'description',
+          'price',
+          'sizes',
+          'available',
+          'foodType',
+          'categoryId',
+        ].forEach(field => {
+          if (req.body[field] !== undefined) {
+            if (field === 'categoryId') {
+              updateData.category = req.body.categoryId;
+            } else {
+              updateData[field] = req.body[field];
+            }
+          }
+        });
         const updatedMenuItem = await MenuItem.findByIdAndUpdate(
             id,
-            req.body,
+            updateData,
             { new: true }
         );
-            if (!updatedMenuItem) {
-                return res.status(404).json({ message: "Menu item not found" });
-            }
-            const populated = await updatedMenuItem.populate('category');
-            res.status(200).json({ message: "Menu item updated successfully", updatedMenuItem: populated });
+        if (!updatedMenuItem) {
+            return res.status(404).json({ message: "Menu item not found" });
+        }
+        const populated = await updatedMenuItem.populate('category');
+        res.status(200).json({ message: "Menu item updated successfully", updatedMenuItem: populated });
     } catch (error) {
         res.status(500).json({ message: "Server error" });
     }

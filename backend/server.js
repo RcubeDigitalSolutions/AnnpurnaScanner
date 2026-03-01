@@ -26,6 +26,9 @@ app.use("/api/admin", require("./routes/AdminRoutes"));
 // restaurant routes
 app.use("/api/restaurants", require("./routes/RestaurantRoutes"));
 
+// public/user-facing routes
+app.use("/api", require("./routes/UserRoutes"));
+
 
 // DB
 connectDB();

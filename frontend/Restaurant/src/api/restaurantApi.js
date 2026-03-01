@@ -26,6 +26,10 @@ export const deleteTable = (id) => API.delete(`/restaurants/tables/${id}`);
 // Order endpoints (user side) - mounted on /orders
 export const createOrder = (data) => API.post('/orders', data);
 
+// Public menu access for guests
+export const getPublicMenu = (restaurantId) => API.get(`/restaurants/${restaurantId}/menu`);
+export const getRestaurantInfo = (restaurantId) => API.get(`/restaurants/${restaurantId}`);
+
 export default {
   restaurantLogin,
   refreshToken,
@@ -44,4 +48,6 @@ export default {
   updateTable,
   deleteTable,
   createOrder,
+  getPublicMenu,
+  getRestaurantInfo,
 };

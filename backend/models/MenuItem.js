@@ -16,11 +16,13 @@ const MenuItemSchema = new mongoose.Schema(
 
     name: { type: String, required: true, trim: true },
 
+    description: { type: String, default: '' },
+    price: { type: Number, default: 0 }, // fallback for single-size items
     available: { type: Boolean, default: true },
 
     foodType: { type: String, enum: ['veg', 'nonveg'], default: 'veg' },
 
-    // Better: allow multiple sizes
+    // allow multiple sizes; price is stored per size, first size used as default
     sizes: [
       {
         name: { type: String, required: true }, // Small, Medium
