@@ -47,14 +47,18 @@ const MenuManagementPage = () => {
     }
   }, [categories, selectedCategory]);
 
-  // fetch menu items from backend and build categories
+  // fetch both menu items and categories in parallel, then merge
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       try {
-        const res = await getMenuItems();
-        const menuItems = res.data.menuItems || [];
+        const [menuRes, catRes] = await Promise.all([getMenuItems(), getCategories()]);
+        const menuItems = menuRes.data.menuItems || [];
+        const allCats = (catRes.data || []).map(c => ({ id: c._id, name: c.name, itemCount: 0, image: c.picture || '' }));
+
         if (!mounted) return;
+
+        // set items first
         setItems(menuItems.map(mi => ({
           id: mi._id,
           categoryId: mi.category?._id,
@@ -67,52 +71,30 @@ const MenuManagementPage = () => {
           raw: mi,
         })));
 
-        // derive categories from populated category on menuItems
-        const cats = [];
-        const seen = new Set();
+        // start with all categories from server
+        const catMap = {};
+        allCats.forEach(c => { catMap[c.id] = { ...c, itemCount: 0 }; });
+
+        // count items for each category
         menuItems.forEach(mi => {
-          if (mi.category && !seen.has(String(mi.category._id))) {
-            seen.add(String(mi.category._id));
-            cats.push({ id: mi.category._id, name: mi.category.name, itemCount: 0, image: mi.category.picture || '' });
+          if (mi.category) {
+            const catId = String(mi.category._id);
+            if (catMap[catId]) {
+              catMap[catId].itemCount += 1;
+            }
           }
         });
-        // count items per category
-        cats.forEach(c => {
-          c.itemCount = menuItems.filter(mi => mi.category && String(mi.category._id) === String(c.id)).length;
-        });
-        if (mounted) {
-          setCategories(cats);
-          if (cats.length > 0 && !selectedCategory) setSelectedCategory(cats[0]);
+
+        const finalCats = Object.values(catMap);
+        setCategories(finalCats);
+        if (finalCats.length > 0 && !selectedCategory) {
+          setSelectedCategory(finalCats[0]);
         }
       } catch (err) {
         // errors handled by axios interceptor (toasts)
       }
     };
     load();
-    return () => { mounted = false };
-  }, []);
-
-  // fetch all categories from backend (ensures categories created by restaurant appear)
-  useEffect(() => {
-    let mounted = true;
-    const loadCats = async () => {
-      try {
-        const res = await getCategories();
-        const cats = (res.data || []).map(c => ({ id: c._id, name: c.name, itemCount: 0, image: c.picture || '' }));
-        if (!mounted) return;
-        setCategories(prev => {
-          // merge server categories with any existing ones without duplicates
-          const map = {};
-          prev.forEach(p => { map[p.id] = p; });
-          cats.forEach(c => { map[c.id] = c; });
-          return Object.values(map);
-        });
-        if (!selectedCategory && cats.length > 0) setSelectedCategory(cats[0]);
-      } catch (e) {
-        // handled by interceptor
-      }
-    };
-    loadCats();
     return () => { mounted = false };
   }, []);
 
