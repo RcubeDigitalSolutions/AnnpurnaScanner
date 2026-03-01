@@ -1,51 +1,125 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, CheckCircle, Users, Download } from 'lucide-react';
+import { getTables, createTable, updateTable, deleteTable, getMe } from '../../../api/restaurantApi';
 
 const FloorPlanPage = () => {
   const [editMode, setEditMode] = useState(false);
   const [savedNotification, setSavedNotification] = useState(false);
 
-  const [tables, setTables] = useState([
-    { id: 1, name: 'Table 1', capacity: 4, status: 'active', qrGenerated: true },
-    { id: 2, name: 'Table 2', capacity: 6, status: 'active', qrGenerated: true },
-    { id: 3, name: 'Table 3', capacity: 2, status: 'active', qrGenerated: true },
-    { id: 4, name: 'Table 4', capacity: 8, status: 'active', qrGenerated: true },
-  ]);
+  const [tables, setTables] = useState([]);
+  const [tableLimit, setTableLimit] = useState(null);
+  const [restaurantId, setRestaurantId] = useState(null);
+
+  // fetch tables and restaurant info (for limit) on mount
+  useEffect(() => {
+    let mounted = true;
+
+    const loadInfo = async () => {
+      try {
+        const me = await getMe();
+        if (mounted) {
+          const rest = me.data.restaurant;
+          setTableLimit(rest?.totalTable ?? null);
+          setRestaurantId(rest?._id || rest?.id || null);
+        }
+      } catch (_) {
+        // ignore
+      }
+    };
+
+    const load = async () => {
+      try {
+        const res = await getTables();
+        if (!mounted) return;
+        const loaded = (res.data.tables || []).map(t => ({
+          id: t._id,
+          name: `Table ${t.number}`,
+          capacity: 4, // default
+          status: t.status,
+          qrGenerated: true,
+          number: t.number,
+          raw: t,
+        }));
+        setTables(loaded);
+      } catch (err) {
+        // handled by interceptor
+      }
+    };
+    loadInfo();
+    load();
+
+    return () => { mounted = false; };
+  }, []);
 
   const [editingTableId, setEditingTableId] = useState(null);
   const [newTable, setNewTable] = useState({ capacity: '' });
   const [isAddingTable, setIsAddingTable] = useState(false);
   const [generateQrOnCreate, setGenerateQrOnCreate] = useState(true);
-  const nextTableNumber = Math.max(...tables.map(t => t.id), 0) + 1;
+  const nextTableNumber = Math.max(...tables.map(t => t.number || t.id), 0) + 1;
   const nextTableLabel = `Table ${nextTableNumber}`;
 
-  const addTable = (generateQr = true) => {
-    const newId = Math.max(...tables.map(t => t.id), 0) + 1;
-    const parsedCapacity = Number.parseInt(newTable.capacity, 10);
-    const capacity = Number.isFinite(parsedCapacity) && parsedCapacity > 0 ? parsedCapacity : 4;
-
-    setTables([...tables, { id: newId, name: `Table ${newId}`, status: 'active', capacity, qrGenerated: generateQr }]);
-    setNewTable({ capacity: '' });
-    setGenerateQrOnCreate(true);
-    setIsAddingTable(false);
-    setSavedNotification(true);
-    setTimeout(() => setSavedNotification(false), 3000);
+  const addTable = async (generateQr = true) => {
+    // front-end limit check as a safeguard
+    if (tableLimit != null && tables.length >= tableLimit) {
+      // should not happen because button disabled, but just in case
+      return;
+    }
+    const newNumber = Math.max(...tables.map(t => t.number || t.id), 0) + 1;
+    try {
+      const res = await createTable({ number: newNumber, status: 'active' });
+      const created = res.data.table;
+      const newItem = {
+        id: created._id,
+        name: `Table ${created.number}`,
+        capacity: 4,
+        status: created.status,
+        qrGenerated: true,
+        number: created.number,
+        raw: created,
+      };
+      setTables([...tables, newItem]);
+      setNewTable({ capacity: '' });
+      setGenerateQrOnCreate(true);
+      setIsAddingTable(false);
+      setSavedNotification(true);
+      setTimeout(() => setSavedNotification(false), 3000);
+    } catch (err) {
+      // handled by interceptor
+    }
   };
 
-  const updateTable = (id, updatedData) => {
-    setTables(tables.map(t => t.id === id ? { ...t, ...updatedData } : t));
-    setSavedNotification(true);
-    setTimeout(() => setSavedNotification(false), 3000);
+  const updateTableOnServer = async (id, updatedData) => {
+    try {
+      await updateTable(id, updatedData);
+      setTables(tables.map(t => t.id === id ? { ...t, ...updatedData } : t));
+      setSavedNotification(true);
+      setTimeout(() => setSavedNotification(false), 3000);
+    } catch (err) {
+      // handled by interceptor
+    }
   };
 
-  const getTableQrValue = (table) => `TABLE:${table.id}|NAME:${table.name}|CAPACITY:${table.capacity}`;
+  const deleteTableFromServer = async (id) => {
+    try {
+      await deleteTable(id);
+      setTables(tables.filter(t => t.id !== id));
+      setSavedNotification(true);
+      setTimeout(() => setSavedNotification(false), 3000);
+    } catch (err) {
+      // handled by interceptor
+    }
+  };
 
+  // build a URL that redirects customers to the public menu page
   const getTableQrUrl = (table) => {
-    const encoded = encodeURIComponent(getTableQrValue(table));
+    if (!restaurantId) return '';
+    const link = `${window.location.origin}/menu/${restaurantId}/${table.number}`;
+    const encoded = encodeURIComponent(link);
     return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encoded}`;
   };
 
   const downloadTableQr = async (table) => {
+    if (!restaurantId) return;
     try {
       const response = await fetch(getTableQrUrl(table));
       const blob = await response.blob();
@@ -93,10 +167,16 @@ const FloorPlanPage = () => {
 
             <button 
               onClick={() => setIsAddingTable(true)}
-              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest inline-flex items-center gap-2 transition-all"
+              disabled={tableLimit != null && tables.length >= tableLimit}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest inline-flex items-center gap-2 transition-all disabled:opacity-50"
             >
               <Plus size={16} /> Add Table
             </button>
+            {tableLimit != null && (
+              <span className="text-xs text-slate-500 mt-1">
+                {tables.length} / {tableLimit} tables used
+              </span>
+            )}
           </div>
         </div>
 
@@ -164,7 +244,7 @@ const FloorPlanPage = () => {
                     </div>
                     <div className="flex gap-2">
                       <button 
-                        onClick={() => { updateTable(table.id, {name: newTable.name, capacity: parseInt(newTable.capacity)}); setEditingTableId(null); }}
+                        onClick={() => { updateTableOnServer(table.id, {status: table.status}); setEditingTableId(null); }}
                         className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all"
                       >
                         Save
@@ -188,7 +268,7 @@ const FloorPlanPage = () => {
                           {table.status}
                         </div>
                         <button
-                          onClick={() => setTables(tables.filter(t => t.id !== table.id))}
+                          onClick={() => deleteTableFromServer(table.id)}
                           className="w-8 h-8 inline-flex items-center justify-center border border-rose-100 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50 transition-all"
                           aria-label={`Delete ${table.name}`}
                           title="Delete table"
@@ -204,14 +284,15 @@ const FloorPlanPage = () => {
                           <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Table QR</span>
                           <button
                             onClick={() => downloadTableQr(table)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-orange-50 text-[10px] font-black uppercase tracking-widest text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-all"
+                            disabled={!restaurantId}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-orange-50 text-[10px] font-black uppercase tracking-widest text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-all disabled:opacity-50"
                           >
                             <Download size={12} /> Download QR
                           </button>
                         </div>
                         <div className="flex justify-center">
                           <img
-                            src={getTableQrUrl(table)}
+                            src={restaurantId ? getTableQrUrl(table) : ''}
                             alt={`${table.name} QR code`}
                             className="w-28 h-28 rounded-lg border border-[#e6dfdc] bg-white"
                           />
@@ -222,7 +303,7 @@ const FloorPlanPage = () => {
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-[11px] font-semibold text-slate-500">QR not generated yet</span>
                           <button
-                            onClick={() => updateTable(table.id, { qrGenerated: true })}
+                            onClick={() => updateTableOnServer(table.id, { status: table.status })}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 text-[10px] font-black uppercase tracking-widest text-orange-600 hover:bg-orange-100 hover:text-orange-700 transition-all"
                           >
                             Generate QR

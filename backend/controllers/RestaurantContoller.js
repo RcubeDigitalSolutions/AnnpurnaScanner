@@ -1,6 +1,8 @@
 const Restaurant = require('../models/Restaurant');
 const Category = require('../models/Category');
 const MenuItem = require('../models/MenuItem');
+const Order = require('../models/Order');
+const Table = require('../models/Table');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -228,6 +230,104 @@ exports.createCategory = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: error.message || 'Server error' });
+    }
+};
+
+// ---- order handling for restaurant dashboard ----
+
+// get all orders for the logged in restaurant
+exports.getOrders = async (req, res) => {
+    try {
+        const restaurantId = req.restaurant.id;
+        const orders = await Order.find({ restaurant: restaurantId });
+        res.status(200).json({ orders });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// update status of an order (restaurant side)
+exports.updateOrderStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        const restaurantId = req.restaurant.id;
+        const updated = await Order.findOneAndUpdate(
+            { _id: id, restaurant: restaurantId },
+            { status },
+            { new: true }
+        );
+        if (!updated) return res.status(404).json({ message: 'Order not found' });
+        res.status(200).json({ order: updated });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// ---- table management ----
+
+// get all tables for the logged in restaurant
+exports.getTables = async (req, res) => {
+    try {
+        const restaurantId = req.restaurant.id;
+        const tables = await Table.find({ restaurant: restaurantId });
+        res.status(200).json({ tables });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// create a new table
+exports.createTable = async (req, res) => {
+    try {
+        const { number, status } = req.body;
+        if (!number || number < 1) return res.status(400).json({ message: 'Valid table number required' });
+        const restaurantId = req.restaurant.id;
+        // enforce max tables per restaurant
+        const restaurant = await Restaurant.findById(restaurantId);
+        if (!restaurant) return res.status(404).json({ message: 'Restaurant not found' });
+        const count = await Table.countDocuments({ restaurant: restaurantId });
+        if (restaurant.totalTable != null && count >= restaurant.totalTable) {
+            return res.status(403).json({ message: `Table limit reached (${restaurant.totalTable})` });
+        }
+        const existing = await Table.findOne({ restaurant: restaurantId, number });
+        if (existing) return res.status(400).json({ message: 'Table number already exists' });
+        const table = new Table({ restaurant: restaurantId, number, status: status || 'active' });
+        await table.save();
+        res.status(201).json({ table, message: 'Table created' });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// update table
+exports.updateTable = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        const restaurantId = req.restaurant.id;
+        const updated = await Table.findOneAndUpdate(
+            { _id: id, restaurant: restaurantId },
+            { status },
+            { new: true }
+        );
+        if (!updated) return res.status(404).json({ message: 'Table not found' });
+        res.status(200).json({ table: updated });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// delete table
+exports.deleteTable = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const restaurantId = req.restaurant.id;
+        const deleted = await Table.findOneAndDelete({ _id: id, restaurant: restaurantId });
+        if (!deleted) return res.status(404).json({ message: 'Table not found' });
+        res.status(200).json({ message: 'Table deleted' });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
     }
 };
 

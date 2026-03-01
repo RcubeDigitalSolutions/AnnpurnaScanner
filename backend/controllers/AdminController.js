@@ -1,5 +1,6 @@
 const Admin = require("../models/Admin");
 const Restaurant = require("../models/Restaurant");
+const Table = require("../models/Table");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
@@ -156,6 +157,17 @@ exports.registerRestaurant = async (req, res) => {
 exports.updateRestaurant = async (req, res) => {
   try {
     const { id } = req.params;
+    const { totalTable } = req.body;
+
+    // if admin lowering limit, ensure there aren't already too many tables
+    if (totalTable != null) {
+      const count = await Table.countDocuments({ restaurant: id });
+      if (count > totalTable) {
+        return res.status(400).json({
+          message: `Cannot set limit to ${totalTable}; ${count} tables already exist`,
+        });
+      }
+    }
 
     const updatedRestaurant = await Restaurant.findByIdAndUpdate(
       id,

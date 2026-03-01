@@ -26,4 +26,15 @@ router.get('/categories/list', verifyRestaurant, verifyRestaurantStatus, Restaur
 router.put('/categories/:id', verifyAdmin, RestaurantController.updateCategory);
 // Delete category
 router.delete('/categories/:id', verifyAdmin, RestaurantController.deleteCategory);
+
+// Order endpoints (restaurant dashboard)
+router.get('/orders', verifyRestaurant, verifyRestaurantStatus, RestaurantController.getOrders);
+router.put('/orders/:id/status', verifyRestaurant, verifyRestaurantStatus, RestaurantController.updateOrderStatus);
+
+// Table endpoints (floor plan management)
+router.get('/tables', verifyRestaurant, verifyRestaurantStatus, RestaurantController.getTables);
+router.post('/tables', verifyRestaurant, verifyRestaurantStatus, RestaurantController.createTable);
+router.put('/tables/:id', verifyRestaurant, verifyRestaurantStatus, RestaurantController.updateTable);
+router.delete('/tables/:id', verifyRestaurant, verifyRestaurantStatus, RestaurantController.deleteTable);
+
 module.exports = router;

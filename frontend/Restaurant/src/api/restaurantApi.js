@@ -13,6 +13,19 @@ export const deleteMenuItem = (id) => API.delete(`/restaurants/menu/${id}`);
 // Category for restaurants
 export const createCategory = (data) => API.post('/restaurants/categories', data);
 
+// Order endpoints (restaurant side)
+export const getOrders = () => API.get('/restaurants/orders');
+export const updateOrderStatus = (id, data) => API.put(`/restaurants/orders/${id}/status`, data);
+
+// Table endpoints (floor plan management)
+export const getTables = () => API.get('/restaurants/tables');
+export const createTable = (data) => API.post('/restaurants/tables', data);
+export const updateTable = (id, data) => API.put(`/restaurants/tables/${id}`, data);
+export const deleteTable = (id) => API.delete(`/restaurants/tables/${id}`);
+
+// Order endpoints (user side) - mounted on /orders
+export const createOrder = (data) => API.post('/orders', data);
+
 export default {
   restaurantLogin,
   refreshToken,
@@ -24,4 +37,11 @@ export default {
   updateMenuItem,
   deleteMenuItem,
   createCategory,
+  getOrders,
+  updateOrderStatus,
+  getTables,
+  createTable,
+  updateTable,
+  deleteTable,
+  createOrder,
 };
