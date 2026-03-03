@@ -41,9 +41,13 @@ const Order = ({
   const [customerDetails, setCustomerDetails] = useState({ name: '', phone: '' })
   const [formErrors, setFormErrors] = useState({})
 
-  const getSizeAddOn = (selectedSize) => {
-    const option = sizeOptions.find(size => size.value === selectedSize)
-    return option ? option.addOn : 0
+  const getSizeAddOn = (item, selectedSize) => {
+    if (!item || !item.sizes) return 0
+    const basePrice = Number(item.price) || 0
+    const sizeObj = item.sizes.find(s => (s.name || s.quantity || '') === selectedSize)
+    if (!sizeObj) return 0
+    const sizePrice = Number(sizeObj.price) || 0
+    return sizePrice - basePrice
   }
 
   const getItemExtrasTotal = (item) => {
@@ -92,7 +96,7 @@ const Order = ({
   }
 
   const getItemTotalPrice = (item) => {
-    const sizeAddOn = getSizeAddOn(item.selectedSize)
+    const sizeAddOn = getSizeAddOn(item, item.selectedSize)
     const extrasAddOn = getItemExtrasTotal(item)
     return (item.price + sizeAddOn + extrasAddOn) * item.quantity
   }
@@ -108,9 +112,15 @@ const Order = ({
   }
 
   const handleSizeChange = (itemId, sizeValue) => {
-    setCart(prevCart => prevCart.map(item => (
-      item.id === itemId ? { ...item, selectedSize: sizeValue } : item
-    )))
+    setCart(prevCart => prevCart.map(item => {
+      if (item.id === itemId) {
+        // Find the price of the selected size
+        const selectedSizeObj = item.sizes?.find(s => (s.name || s.quantity || '') === sizeValue)
+        const newPrice = selectedSizeObj ? Number(selectedSizeObj.price) || item.price : item.price
+        return { ...item, selectedSize: sizeValue, price: newPrice }
+      }
+      return item
+    }))
     // also sync the menu-level size selection so menu buttons reflect this choice
     try {
       setSizeSelection(prev => ({ ...prev, [itemId]: sizeValue }))
@@ -226,7 +236,7 @@ const Order = ({
           .map(([extraId]) => extraId)
 
         // compute numeric add-on value so server can reconstruct price correctly
-        const sizeAddOn = getSizeAddOn(item.selectedSize);
+        const sizeAddOn = getSizeAddOn(item, item.selectedSize);
         const extrasAddOn = getItemExtrasTotal(item);
 
         return {
@@ -326,25 +336,31 @@ const Order = ({
                   <div className="mb-3">
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Size Options</p>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {sizeOptions.map(size => {
-                        const isSelected = (item.selectedSize || 'regular') === size.value
-                        return (
-                          <button
-                            key={size.value}
-                            onClick={() => handleSizeChange(item.id, size.value)}
-                            className={`rounded-lg border px-2 py-1.5 text-left text-[11px] font-semibold transition ${
-                              isSelected
-                                ? 'border-orange-600 bg-orange-50 text-orange-700'
-                                : 'border-gray-300 bg-white text-gray-600'
-                            }`}
-                          >
-                            <span className="block">{size.label}</span>
-                            <span className="block text-[10px] font-medium opacity-80">
-                              {size.addOn > 0 ? `+₹${size.addOn}` : 'Base'}
-                            </span>
-                          </button>
-                        )
-                      })}
+                      {(item.sizes && item.sizes.length > 0) ? (
+                        item.sizes.map(size => {
+                          const sizeLabel = size.name || size.quantity || 'Size'
+                          const isSelected = (item.selectedSize || '') === sizeLabel
+                          const sizePrice = Number(size.price) || 0
+                          return (
+                            <button
+                              key={sizeLabel}
+                              onClick={() => handleSizeChange(item.id, sizeLabel)}
+                              className={`rounded-lg border px-2 py-1.5 text-left text-[11px] font-semibold transition ${
+                                isSelected
+                                  ? 'border-orange-600 bg-orange-50 text-orange-700'
+                                  : 'border-gray-300 bg-white text-gray-600'
+                              }`}
+                            >
+                              <span className="block">{sizeLabel}</span>
+                              <span className="block text-[10px] font-medium opacity-80">
+                                ₹{sizePrice}
+                              </span>
+                            </button>
+                          )
+                        })
+                      ) : (
+                        <p className="text-xs text-gray-500">No sizes available</p>
+                      )}
                     </div>
                   </div>
 

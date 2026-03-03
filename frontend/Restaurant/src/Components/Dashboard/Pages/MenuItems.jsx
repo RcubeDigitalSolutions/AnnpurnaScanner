@@ -188,6 +188,28 @@ const MenuManagementPage = () => {
     }));
   };
 
+  const toggleItemAvailability = async (item) => {
+    try {
+      const updatedItem = { ...item, available: !item.available };
+      const payload = {
+        categoryId: item.categoryId,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        sizes: item.sizes || [],
+        available: !item.available,
+        foodType: item.foodType,
+      };
+      
+      await updateMenuItem(item.id, payload);
+      
+      // Update local state after successful save
+      setItems(items.map(i => i.id === item.id ? { ...i, available: !i.available } : i));
+    } catch (err) {
+      // Error handled by axios interceptor (toast)
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#ece8e7] p-5 md:p-6">
       <div className="max-w-7xl mx-auto rounded-[28px] border border-[#e3dcda] bg-[#f5f1f0] shadow-[0_10px_30px_rgba(0,0,0,0.03)] overflow-hidden flex flex-col">
@@ -335,7 +357,7 @@ const MenuManagementPage = () => {
                           <span className="text-[10px] font-black uppercase text-slate-500">{item.available ? 'Available' : 'Out'}</span>
                         </div>
                         <button
-                          onClick={() => setItems(items.map(i => i.id === item.id ? { ...i, available: !i.available } : i))}
+                          onClick={() => toggleItemAvailability(item)}
                           className={`text-[10px] font-bold px-2 py-1 rounded transition-all ${item.available
                               ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
                               : 'text-rose-600 bg-rose-50 hover:bg-rose-100'

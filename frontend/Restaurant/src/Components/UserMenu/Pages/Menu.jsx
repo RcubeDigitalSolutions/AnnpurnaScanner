@@ -47,7 +47,8 @@ const Menu = () => {
   const filteredItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = selectedCategory === 'All' || item.category.name === selectedCategory
-    return matchesSearch && matchesCategory
+    const isAvailable = item.available === true
+    return matchesSearch && matchesCategory && isAvailable
   })
 
   const addToCart = (item, sizeKeyOverride) => {
@@ -132,12 +133,6 @@ const Menu = () => {
   }
 
   const getTotalAmount = () => {
-    const sizePriceMap = {
-      regular: 0,
-      medium: 40,
-      large: 80
-    }
-
     const extrasOptions = [
       { id: 'cheese', amount: 40 },
       { id: 'paneer', amount: 60 },
@@ -159,9 +154,8 @@ const Menu = () => {
     }
 
     return cart.reduce((total, item) => {
-      const sizeExtra = sizePriceMap[item.selectedSize] || 0
       const itemExtras = getItemExtrasTotal(item.id)
-      return total + ((item.price + sizeExtra + itemExtras) * item.quantity)
+      return total + ((item.price + itemExtras) * item.quantity)
     }, 0)
   }
 
@@ -213,9 +207,10 @@ const Menu = () => {
           return obj;
         });
         setMenuItems(items);
-        // compute categories from items, preserving images when available
+        // compute categories from AVAILABLE items only, preserving images when available
+        const availableItems = items.filter(i => i.available === true);
         const catMap = {};
-        items.forEach(i => {
+        availableItems.forEach(i => {
           const cname = i.category?.name;
           if (cname) {
             if (!catMap[cname]) {
@@ -395,31 +390,9 @@ const Menu = () => {
                       ₹ {getItemPrice(item)}.00 {item.available ? '' : '(Unavailable)'}
                     </p>
                     {item.sizes && item.sizes.length > 1 && (
-                      <>
-                        <p className="mt-1 text-sm text-gray-500">
-                          Sizes: {item.sizes.map(s => `${s.name} ₹${s.price}`).join(', ')}
-                        </p>
-                        <div className="mt-1 mb-2 flex gap-2 text-xs">
-                          {item.sizes
-                            .filter(sz => {
-                              const l = (sz.name || sz.quantity || '').toString().toLowerCase();
-                              return l !== 'half' && l !== 'full';
-                            })
-                            .map(sz => {
-                              const label = sz.name || sz.quantity || 'Size';
-                              const selected = sizeSelection[item.id] === label;
-                              return (
-                                <button
-                                  key={label}
-                                  onClick={() => setSizeSelection(prev => ({ ...prev, [item.id]: label }))}
-                                  className={`px-2 py-1 rounded text-gray-700 border ${selected ? 'border-orange-600 bg-orange-50' : 'border-gray-300 bg-white'}`}
-                                >
-                                  {label}
-                                </button>
-                              );
-                            })}
-                        </div>
-                      </>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Available sizes: {item.sizes.map(s => `${s.name} ₹${s.price}`).join(', ')} — Select in cart
+                      </p>
                     )}
                   </div>
 
