@@ -1,6 +1,7 @@
 const Restaurant = require("../models/Restaurant");
 const MenuItem = require("../models/MenuItem");
 const Order = require("../models/Order");
+const { emitOrderCreated } = require("../socket");
 
 //get all restaurants
 exports.getAllRestaurants = async (req, res) => {
@@ -168,6 +169,8 @@ exports.createOrder = async (req, res) => {
             totalPrice: parsedTotal,
         };
         const order = await Order.create(orderData);
+            const io = req.app.get('io');
+            emitOrderCreated(io, order);
         res.status(201).json({ order, message: 'Order placed successfully' });
     } catch (error) {
         // log error to console for debugging

@@ -5,6 +5,7 @@ const Order = require('../models/Order');
 const Table = require('../models/Table');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { emitOrderUpdated } = require('../socket');
 
 //restaurant login
 exports.login = async (req, res) => {
@@ -338,12 +339,30 @@ exports.updateOrderStatus = async (req, res) => {
         const { id } = req.params;
         const { status } = req.body;
         const restaurantId = req.restaurant.id;
+
+        const normalizeStatusForSchema = (value) => {
+            const next = String(value || '').trim().toLowerCase();
+            if (next === 'accepted' || next === 'preparing' || next === 'confirmed') return 'preparing';
+            if (next === 'ongoing' || next === 'served' || next === 'in process' || next === 'in_process') return 'served';
+            if (next === 'completed' || next === 'complete' || next === 'paid') return 'paid';
+            if (next === 'pending') return 'pending';
+            if (next === 'cancelled') return 'cancelled';
+            return '';
+        };
+
+        const normalizedStatus = normalizeStatusForSchema(status);
+        if (!normalizedStatus) {
+            return res.status(400).json({ message: 'Invalid order status' });
+        }
+
         const updated = await Order.findOneAndUpdate(
             { _id: id, restaurant: restaurantId },
-            { status },
+            { status: normalizedStatus },
             { new: true }
         );
         if (!updated) return res.status(404).json({ message: 'Order not found' });
+        const io = req.app.get('io');
+        emitOrderUpdated(io, updated);
         res.status(200).json({ order: updated });
     } catch (error) {
         res.status(500).json({ message: "Server error" });

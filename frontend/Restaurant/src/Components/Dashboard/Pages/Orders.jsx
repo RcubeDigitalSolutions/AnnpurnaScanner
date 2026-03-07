@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { CheckCircle2, Eye, Play, Search, XCircle } from 'lucide-react';
 import OrderDetailsPanel from './OrderDetailsPanel';
 import restaurantApi from '../../../api/restaurantApi';
+import { getSocket } from '../../../api/socket';
 
 const BOARD_COLUMNS = [
   {
@@ -39,12 +40,57 @@ const Orders = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
 
+  const normalizeBoardStatus = (value) => {
+    const status = String(value || '').toLowerCase();
+    if (status === 'preparing' || status === 'accepted' || status === 'confirmed') return 'accepted';
+    if (status === 'served' || status === 'ongoing' || status === 'in process' || status === 'in_process') return 'ongoing';
+    if (status === 'paid' || status === 'completed' || status === 'complete') return 'completed';
+    if (status === 'cancelled') return 'cancelled';
+    return 'pending';
+  };
+
   // load orders from backend on mount
   useEffect(() => {
     let mounted = true;
+    let socket;
+    let connectedRestaurantId;
+
+    const upsertOrder = (incomingOrder) => {
+      if (!incomingOrder?._id) return;
+      const nextOrder = {
+        id: incomingOrder._id,
+        orderNumber: incomingOrder.orderNumber,
+        customerName: incomingOrder.customerName,
+        phone: incomingOrder.phoneNumber,
+        tableNo: `T-${incomingOrder.tableNumber}`,
+        status: normalizeBoardStatus(incomingOrder.status),
+        createdAt: incomingOrder.createdAt,
+        items: (incomingOrder.items || []).map((i) => ({ name: i.name, size: i.size, qty: i.quantity })),
+      };
+
+      const isToday = nextOrder.createdAt && new Date(nextOrder.createdAt).toDateString() === new Date().toDateString();
+      if (!isToday) return;
+
+      setOrders((prev) => {
+        const idx = prev.findIndex((order) => order.id === nextOrder.id);
+        if (idx === -1) return [nextOrder, ...prev];
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...nextOrder };
+        return next;
+      });
+
+      setSelectedOrder((prev) => {
+        if (!prev || prev.id !== nextOrder.id) return prev;
+        return { ...prev, ...nextOrder };
+      });
+    };
+
     const load = async () => {
       try {
-        const res = await restaurantApi.getOrders();
+        const [res, meRes] = await Promise.all([
+          restaurantApi.getOrders(),
+          restaurantApi.getMe().catch(() => null),
+        ]);
         if (!mounted) return;
         const today = new Date().toDateString();
         const mapped = (res.data.orders || [])
@@ -55,17 +101,35 @@ const Orders = () => {
           customerName: o.customerName,
           phone: o.phoneNumber,
           tableNo: `T-${o.tableNumber}`,
-          status: o.status,
+          status: normalizeBoardStatus(o.status),
           createdAt: o.createdAt,
           items: (o.items || []).map(i => ({ name: i.name, size: i.size, qty: i.quantity })),
         }));
         setOrders(mapped);
+
+        connectedRestaurantId = meRes?.data?.restaurant?._id || res.data.orders?.[0]?.restaurant;
+        if (connectedRestaurantId) {
+          socket = getSocket();
+          socket.emit('join:restaurant', connectedRestaurantId);
+          socket.on('order:created', ({ order }) => upsertOrder(order));
+          socket.on('order:updated', ({ order }) => upsertOrder(order));
+        }
       } catch (err) {
         console.error(err);
       }
     };
     load();
-    return () => { mounted = false; };
+
+    return () => {
+      mounted = false;
+      if (socket) {
+        socket.off('order:created');
+        socket.off('order:updated');
+        if (connectedRestaurantId) {
+          socket.emit('leave:restaurant', connectedRestaurantId);
+        }
+      }
+    };
   }, []);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);

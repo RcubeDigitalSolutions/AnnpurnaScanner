@@ -3,6 +3,7 @@ import { useParams, Navigate } from 'react-router-dom'
 import { Search, ChevronDown, ChevronUp, Home as HomeIcon, UtensilsCrossed, ClipboardList, Receipt, Users, X } from 'lucide-react'
 import Order from './Order'
 import restaurantApi from '../../../api/restaurantApi'
+import { getSocket } from '../../../api/socket'
 
 const Menu = () => {
   const { restaurantId, tableNumber: tableParam } = useParams()
@@ -258,6 +259,26 @@ const Menu = () => {
       clearInterval(timer);
     };
   }, [latestOrder?._id, latestOrder?.status]);
+
+  useEffect(() => {
+    if (!latestOrder?._id) return;
+
+    const socket = getSocket();
+    const orderId = latestOrder._id;
+    socket.emit('join:order', orderId);
+
+    const handleOrderUpdated = ({ order }) => {
+      if (!order || String(order._id) !== String(orderId)) return;
+      setLatestOrder(order);
+    };
+
+    socket.on('order:updated', handleOrderUpdated);
+
+    return () => {
+      socket.off('order:updated', handleOrderUpdated);
+      socket.emit('leave:order', orderId);
+    };
+  }, [latestOrder?._id]);
 
   const handleOrderPlaced = (order) => {
     setLatestOrder(order);
