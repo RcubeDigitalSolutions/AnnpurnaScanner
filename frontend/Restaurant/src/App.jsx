@@ -40,6 +40,15 @@ const AppRoutes = ({ isLoggedIn, setIsLoggedIn, authChecked, setAuthChecked }) =
   React.useEffect(() => {
     let mounted = true;
     const init = async () => {
+      // Customer menu routes must stay public and should never force login.
+      if (location.pathname.startsWith('/menu/')) {
+        if (mounted) {
+          setIsLoggedIn(false);
+          setAuthChecked(true);
+        }
+        return;
+      }
+
       const token = localStorage.getItem('token');
       if (token) {
         if (mounted) {
@@ -65,7 +74,7 @@ const AppRoutes = ({ isLoggedIn, setIsLoggedIn, authChecked, setAuthChecked }) =
     };
     init();
     return () => { mounted = false };
-  }, []);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     try {

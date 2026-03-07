@@ -24,6 +24,8 @@ const Menu = () => {
   const [selectedExtras, setSelectedExtras] = useState({})
   const [showMiniCart, setShowMiniCart] = useState(true)
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false)
+  const [latestOrder, setLatestOrder] = useState(null)
+  const [showOrderDetails, setShowOrderDetails] = useState(false)
 
   // menu data fetched from server
   const [menuItems, setMenuItems] = useState([])
@@ -31,6 +33,30 @@ const Menu = () => {
   const [categories, setCategories] = useState([])
   // track user-selected size option for items with multiple choices
   const [sizeSelection, setSizeSelection] = useState({})
+
+  const trackingStorageKey = `latestOrder:${restaurantId || 'unknown'}:${tableNumber || 'unknown'}`
+
+  const ORDER_PHASE_LABELS = {
+    pending: 'Pending',
+    accepted: 'Confirmed',
+    preparing: 'In Process',
+    ongoing: 'In Process',
+    served: 'Ready / Served',
+    completed: 'Completed',
+    paid: 'Completed',
+    cancelled: 'Cancelled',
+  }
+
+  const ORDER_PHASE_CLASS = {
+    pending: 'bg-amber-100 text-amber-700 border-amber-200',
+    accepted: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    preparing: 'bg-sky-100 text-sky-700 border-sky-200',
+    ongoing: 'bg-sky-100 text-sky-700 border-sky-200',
+    served: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+    completed: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    paid: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    cancelled: 'bg-rose-100 text-rose-700 border-rose-200',
+  }
 
   // compute price helper (taking selected size into account)
   const getItemPrice = (item) => {
@@ -143,8 +169,9 @@ const Menu = () => {
       { id: 'cream', amount: 25 }
     ]
 
-    const getItemExtrasTotal = (itemId) => {
-      const itemExtras = selectedExtras[itemId] || {}
+    const getItemExtrasTotal = (item) => {
+      const cartKey = `${item.id}__${item.selectedSize || 'regular'}`
+      const itemExtras = selectedExtras[cartKey] || {}
       return Object.entries(itemExtras)
         .filter(([_, isSelected]) => isSelected)
         .reduce((sum, [extraId]) => {
@@ -154,7 +181,7 @@ const Menu = () => {
     }
 
     return cart.reduce((total, item) => {
-      const itemExtras = getItemExtrasTotal(item.id)
+      const itemExtras = getItemExtrasTotal(item)
       return total + ((item.price + itemExtras) * item.quantity)
     }, 0)
   }
@@ -178,6 +205,54 @@ const Menu = () => {
       setShowRemoveConfirm(false)
     }
   }, [cart.length])
+
+  useEffect(() => {
+    if (!restaurantId || !tableNumber) return;
+    const savedOrderId = localStorage.getItem(trackingStorageKey);
+    if (savedOrderId) {
+      setLatestOrder((prev) => prev?._id ? prev : { _id: savedOrderId, status: 'pending' });
+    }
+  }, [restaurantId, tableNumber, trackingStorageKey]);
+
+  // poll latest order status for live customer tracking
+  useEffect(() => {
+    if (!latestOrder?._id) return;
+
+    let mounted = true;
+    const terminalStatuses = ['cancelled', 'completed', 'paid'];
+
+    const refreshOrder = async () => {
+      try {
+        const res = await restaurantApi.getOrderById(latestOrder._id);
+        if (!mounted) return;
+        const serverOrder = res?.data?.order;
+        if (!serverOrder) return;
+        setLatestOrder(serverOrder);
+      } catch (err) {
+        // keep previous order data on transient network issues
+      }
+    };
+
+    refreshOrder();
+    const timer = setInterval(() => {
+      if (!terminalStatuses.includes(String(latestOrder.status || '').toLowerCase())) {
+        refreshOrder();
+      }
+    }, 7000);
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, [latestOrder?._id, latestOrder?.status]);
+
+  const handleOrderPlaced = (order) => {
+    setLatestOrder(order);
+    setShowOrderDetails(true);
+    if (order?._id) {
+      localStorage.setItem(trackingStorageKey, order._id);
+    }
+  };
 
   // fetch menu from server when restaurantId is available
   useEffect(() => {
@@ -360,6 +435,51 @@ const Menu = () => {
           </button>
         </div>
       </header>
+
+      {latestOrder && (
+        <section className="mx-4 mt-4 rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Your Last Order</p>
+              <p className="text-sm font-bold text-slate-900">
+                Order No: {latestOrder.orderNumber || 'N/A'}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Total: ₹{Number(latestOrder.totalPrice || 0).toFixed(2)}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full border px-3 py-1 text-xs font-bold ${ORDER_PHASE_CLASS[latestOrder.status] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                {ORDER_PHASE_LABELS[latestOrder.status] || String(latestOrder.status || 'Pending')}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowOrderDetails((prev) => !prev)}
+                className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700"
+              >
+                {showOrderDetails ? 'Hide Order' : 'Show Order'}
+              </button>
+            </div>
+          </div>
+
+          {showOrderDetails && (
+            <div className="mt-3 rounded-xl border border-orange-100 bg-orange-50/30 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 mb-2">Order Items</p>
+              <div className="space-y-2">
+                {(latestOrder.items || []).map((it, idx) => (
+                  <div key={`${it.name}-${idx}`} className="flex items-center justify-between rounded-lg border border-orange-100 bg-white px-2 py-2 text-xs">
+                    <div>
+                      <p className="font-semibold text-slate-800">{it.name}</p>
+                      <p className="text-slate-500">Size: {it.size || 'Regular'} • Qty: {it.quantity || 0}</p>
+                    </div>
+                    <p className="font-bold text-orange-700">₹{Number((it.price || 0) * (it.quantity || 0)).toFixed(2)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Menu Items */}
       {showMenuItems && (
@@ -566,6 +686,7 @@ const Menu = () => {
         setSelectedExtras={setSelectedExtras}
         sizeSelection={sizeSelection}
         setSizeSelection={setSizeSelection}
+        onOrderPlaced={handleOrderPlaced}
       />
     </div>
   )

@@ -107,6 +107,23 @@ exports.generateOrderNumber = async (req, res) => {
     }
 };
 
+// public order tracking by order id
+exports.getOrderById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const order = await Order.findById(id)
+            .select('orderNumber status tableNumber customerName phoneNumber items totalPrice createdAt updatedAt');
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        res.status(200).json({ order });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 // create order from user side
 exports.createOrder = async (req, res) => {
     try {

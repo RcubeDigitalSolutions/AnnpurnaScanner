@@ -26,6 +26,7 @@ export const deleteTable = (id) => API.delete(`/restaurants/tables/${id}`);
 
 // Order endpoints (user side) - mounted on /orders
 export const generateOrderNumber = () => API.get('/orders/generate-number');
+export const getOrderById = (id) => API.get(`/orders/${id}`);
 export const createOrder = (data) => API.post('/orders', data);
 
 // Public menu access for guests
@@ -50,6 +51,7 @@ export default {
   updateTable,
   deleteTable,
   generateOrderNumber,
+  getOrderById,
   createOrder,
   getPublicMenu,
   getRestaurantInfo,

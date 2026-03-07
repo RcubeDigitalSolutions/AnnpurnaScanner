@@ -4,16 +4,7 @@ const DEFAULT_API = "http://localhost:5000/api";
 const envUrl = import.meta.env.VITE_API_URL;
 let BASE_URL = envUrl || DEFAULT_API;
 
-// If dev server is running (vite default port 5173) and VITE_API_URL was set to '/api',
-// prefer the local backend to avoid requests hitting the Vite dev server without a proxy.
-if (
-  typeof window !== 'undefined' &&
-  window.location.hostname === 'localhost' &&
-  (window.location.port === '5173' || window.location.port === '5174') &&
-  envUrl === '/api'
-) {
-  BASE_URL = DEFAULT_API;
-}
+// Keep '/api' as-is so Vite proxy works for localhost and LAN/mobile clients.
 
 const API = axios.create({
   baseURL: BASE_URL,
@@ -43,9 +34,23 @@ API.interceptors.response.use(
     const originalRequest = error.config;
     if (!originalRequest) return Promise.reject(error);
 
+    const requestUrl = String(originalRequest.url || '');
+    const isAuthEndpoint = requestUrl.includes('/restaurants/login') || requestUrl.includes('/restaurants/refresh-token');
+    const isPublicEndpoint =
+      /^\/orders(\/|$)/.test(requestUrl) ||
+      /^\/restaurants\/[^/]+(\/menu)?$/.test(requestUrl);
+    const isPublicMenuRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/menu/');
+
     originalRequest._retry = originalRequest._retry || 0;
 
-    if (error.response && error.response.status === 401 && originalRequest._retry < 1) {
+    if (
+      error.response &&
+      error.response.status === 401 &&
+      originalRequest._retry < 1 &&
+      !isAuthEndpoint &&
+      !isPublicEndpoint &&
+      !isPublicMenuRoute
+    ) {
       originalRequest._retry += 1;
       try {
         const res = await API.post('/restaurants/refresh-token');
@@ -58,7 +63,11 @@ API.interceptors.response.use(
         }
       } catch (err) {
         localStorage.removeItem('token');
-        try { if (typeof window !== 'undefined') window.location.href = '/login'; } catch(e){}
+        try {
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/menu/')) {
+            window.location.href = '/login';
+          }
+        } catch (e) {}
       }
     }
 

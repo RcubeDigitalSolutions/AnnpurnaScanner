@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState, useEffect, useCallback } from 'react'
 import { X, StickyNote, User, Phone } from 'lucide-react'
 import restaurantApi from '../../../api/restaurantApi'
 
@@ -26,8 +26,9 @@ const Order = ({
   getExtraCharges,
   setCart,
   selectedExtras,
-  setSelectedExtras
-  , setSizeSelection
+  setSelectedExtras,
+  onOrderPlaced,
+  setSizeSelection,
 }) => {
   const [openNoteEditors, setOpenNoteEditors] = useState({})
   const [noteDrafts, setNoteDrafts] = useState({})
@@ -35,6 +36,51 @@ const Order = ({
   const [customerDetails, setCustomerDetails] = useState({ name: '', phone: '' })
   const [orderNumber, setOrderNumber] = useState('')
   const [formErrors, setFormErrors] = useState({})
+
+  const getCartItemKey = (itemId, selectedSize = 'regular') => `${itemId}__${selectedSize}`
+
+  const normalizeCartItems = useCallback((items) => {
+    const byKey = new Map()
+    const order = []
+
+    items.forEach((item) => {
+      const key = getCartItemKey(item.id, item.selectedSize || 'regular')
+      if (!byKey.has(key)) {
+        byKey.set(key, { ...item })
+        order.push(key)
+      } else {
+        const prev = byKey.get(key)
+        byKey.set(key, {
+          ...prev,
+          quantity: (prev.quantity || 0) + (item.quantity || 0),
+        })
+      }
+    })
+
+    return order.map((key) => byKey.get(key))
+  }, [])
+
+  // Guard against duplicate rows for same item+size.
+  useEffect(() => {
+    const normalized = normalizeCartItems(cart)
+    const changed =
+      normalized.length !== cart.length ||
+      normalized.some((item, idx) => {
+        const current = cart[idx]
+        if (!current) return true
+        return (
+          item.id !== current.id ||
+          (item.selectedSize || 'regular') !== (current.selectedSize || 'regular') ||
+          (item.quantity || 0) !== (current.quantity || 0)
+        )
+      })
+
+    if (changed) {
+      setCart(normalized)
+    }
+  }, [cart, setCart, normalizeCartItems])
+
+  const normalizedCart = useMemo(() => normalizeCartItems(cart), [cart, normalizeCartItems])
 
   const generateOrderNumber = async () => {
     try {
@@ -64,7 +110,8 @@ const Order = ({
   }
 
   const getItemExtrasTotal = (item) => {
-    const itemExtras = selectedExtras[item.id] || {}
+    const cartKey = getCartItemKey(item.id, item.selectedSize || 'regular')
+    const itemExtras = selectedExtras[cartKey] || {}
     return Object.entries(itemExtras)
       .filter((entry) => entry[1])
       .reduce((sum, [extraId]) => {
@@ -91,26 +138,58 @@ const Order = ({
     return (item.price + sizeAddOn + extrasAddOn) * item.quantity
   }
 
-  const toggleExtra = (itemId, extraId) => {
+  const toggleExtra = (cartKey, extraId) => {
     setSelectedExtras(prev => ({
       ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        [extraId]: !prev[itemId]?.[extraId]
+      [cartKey]: {
+        ...prev[cartKey],
+        [extraId]: !prev[cartKey]?.[extraId]
       }
     }))
   }
 
-  const handleSizeChange = (itemId, sizeValue) => {
-    setCart(prevCart => prevCart.map(item => {
-      if (item.id === itemId) {
-        // Find the price of the selected size
-        const selectedSizeObj = item.sizes?.find(s => (s.name || s.quantity || '') === sizeValue)
-        const newPrice = selectedSizeObj ? Number(selectedSizeObj.price) || item.price : item.price
-        return { ...item, selectedSize: sizeValue, price: newPrice }
+  const handleSizeChange = (itemId, currentSize, sizeValue) => {
+    setCart(prevCart => {
+      const next = [...prevCart]
+      const index = next.findIndex((item) => item.id === itemId && (item.selectedSize || 'regular') === currentSize)
+      if (index === -1) return prevCart
+
+      const item = next[index]
+      if ((item.selectedSize || 'regular') === sizeValue) return prevCart
+
+      const selectedSizeObj = item.sizes?.find(s => (s.name || s.quantity || '') === sizeValue)
+      const newPrice = selectedSizeObj ? Number(selectedSizeObj.price) || item.price : item.price
+
+      const mergeIndex = next.findIndex(
+        (cartItem, idx) => idx !== index && cartItem.id === itemId && (cartItem.selectedSize || 'regular') === sizeValue
+      )
+
+      // If row has quantity > 1, move only one unit to selected size.
+      if ((item.quantity || 0) > 1) {
+        next[index] = { ...item, quantity: item.quantity - 1 }
+        if (mergeIndex !== -1) {
+          next[mergeIndex] = {
+            ...next[mergeIndex],
+            quantity: (next[mergeIndex].quantity || 0) + 1,
+          }
+        } else {
+          next.push({ ...item, selectedSize: sizeValue, price: newPrice, quantity: 1 })
+        }
+      } else {
+        // If row has single quantity, move whole row.
+        if (mergeIndex !== -1) {
+          next[mergeIndex] = {
+            ...next[mergeIndex],
+            quantity: (next[mergeIndex].quantity || 0) + 1,
+          }
+          next.splice(index, 1)
+        } else {
+          next[index] = { ...item, selectedSize: sizeValue, price: newPrice }
+        }
       }
-      return item
-    }))
+
+      return next
+    })
     // also sync the menu-level size selection so menu buttons reflect this choice
     try {
       setSizeSelection(prev => ({ ...prev, [itemId]: sizeValue }))
@@ -119,18 +198,18 @@ const Order = ({
     }
   }
 
-  const toggleNoteEditor = (itemId) => {
+  const toggleNoteEditor = (cartKey) => {
     setOpenNoteEditors(prev => {
-      const isOpening = !prev[itemId]
+      const isOpening = !prev[cartKey]
 
       if (isOpening) {
         setNoteDrafts(currentDrafts => ({
           ...currentDrafts,
-          [itemId]: ''
+          [cartKey]: ''
         }))
       }
 
-      return { ...prev, [itemId]: isOpening }
+      return { ...prev, [cartKey]: isOpening }
     })
   }
 
@@ -141,16 +220,16 @@ const Order = ({
       .filter(Boolean)
   }
 
-  const handleSaveInstructions = (itemId) => {
-    const draftText = (noteDrafts[itemId] || '').trim()
+  const handleSaveInstructions = (cartKey) => {
+    const draftText = (noteDrafts[cartKey] || '').trim()
 
     if (!draftText) {
       setItemNotes(prev => {
         const next = { ...prev }
-        delete next[itemId]
+        delete next[cartKey]
         return next
       })
-      setOpenNoteEditors(prev => ({ ...prev, [itemId]: false }))
+      setOpenNoteEditors(prev => ({ ...prev, [cartKey]: false }))
       return
     }
 
@@ -158,22 +237,22 @@ const Order = ({
 
     setItemNotes(prev => ({
       ...prev,
-      [itemId]: normalized
+      [cartKey]: normalized
     }))
-    setOpenNoteEditors(prev => ({ ...prev, [itemId]: false }))
+    setOpenNoteEditors(prev => ({ ...prev, [cartKey]: false }))
   }
 
-  const handleRemoveInstruction = (itemId, removeIndex) => {
-    const instructions = parseInstructions(itemNotes[itemId])
+  const handleRemoveInstruction = (cartKey, removeIndex) => {
+    const instructions = parseInstructions(itemNotes[cartKey])
     const updated = instructions.filter((_, index) => index !== removeIndex)
 
     setItemNotes(prev => {
       const next = { ...prev }
 
       if (updated.length === 0) {
-        delete next[itemId]
+        delete next[cartKey]
       } else {
-        next[itemId] = updated.join('\n')
+        next[cartKey] = updated.join('\n')
       }
 
       return next
@@ -236,7 +315,7 @@ const Order = ({
           selectedSize: item.selectedSize || 'regular',
           price: item.price || 0,
           addOns: sizeAddOn + extrasAddOn,
-          notes: parseInstructions(itemNotes[item.id])
+          notes: parseInstructions(itemNotes[getCartItemKey(item.id, item.selectedSize || 'regular')])
         }
       }),
       totalAmount: getTotalAmount(),
@@ -244,9 +323,13 @@ const Order = ({
     }
 
     try {
-      await restaurantApi.createOrder(orderPayload);
+      const res = await restaurantApi.createOrder(orderPayload);
+      const placedOrder = res?.data?.order;
       const ev = new CustomEvent('app-toast', { detail: { message: `Order placed successfully for ${orderPayload.customer.name}!`, type: 'success' } });
       window.dispatchEvent(ev);
+      if (placedOrder && typeof onOrderPlaced === 'function') {
+        onOrderPlaced(placedOrder);
+      }
     } catch (e) {
       console.error(e);
       // error toast handled by interceptor
@@ -261,7 +344,7 @@ const Order = ({
     setShowCartModal(false)
   }
 
-  if (!showCartModal || cart.length === 0) {
+  if (!showCartModal || normalizedCart.length === 0) {
     return null
   }
 
@@ -282,16 +365,17 @@ const Order = ({
         <div className="border-b border-gray-200 px-4 py-4 pr-14 sm:px-5 sm:pr-16">
           <h2 className="text-lg font-bold text-gray-900 sm:text-xl">Your Order Summary</h2>
           <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-500">
-            {cart.length} item{cart.length > 1 ? 's' : ''} in your cart
+            {normalizedCart.length} item{normalizedCart.length > 1 ? 's' : ''} in your cart
           </p>
         </div>
 
         <div className="overflow-y-auto px-4 py-4 sm:px-5">
-          {cart.map(item => {
-            const extraChargeInfo = getExtraCharges(itemNotes[item.id])
+          {normalizedCart.map(item => {
+            const cartKey = getCartItemKey(item.id, item.selectedSize || 'regular')
+            const extraChargeInfo = getExtraCharges(itemNotes[cartKey])
 
             return (
-            <div key={item.id} className="mb-3 rounded-xl border border-gray-100 bg-gray-50/40 p-3 last:mb-0">
+            <div key={`${cartKey}-${item.name}`} className="mb-3 rounded-xl border border-gray-100 bg-gray-50/40 p-3 last:mb-0">
               <div className="flex items-start gap-3">
                 <div className="shrink-0 pt-1">
                   <div className={`flex h-5 w-5 items-center justify-center rounded border-2 ${
@@ -308,7 +392,7 @@ const Order = ({
                     <h3 className="text-[15px] font-semibold leading-5 text-gray-900 sm:text-base">{item.name}</h3>
                     <div className="inline-flex w-fit items-center rounded-lg border-2 border-orange-600">
                       <button
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item.id, item.selectedSize || 'regular')}
                         className="flex h-8 w-8 items-center justify-center text-lg font-bold text-orange-600"
                       >
                         −
@@ -317,7 +401,7 @@ const Order = ({
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => addToCart(item)}
+                        onClick={() => addToCart(item, item.selectedSize || 'regular')}
                         className="flex h-8 w-8 items-center justify-center text-lg font-bold text-orange-600"
                       >
                         +
@@ -336,7 +420,7 @@ const Order = ({
                           return (
                             <button
                               key={sizeLabel}
-                              onClick={() => handleSizeChange(item.id, sizeLabel)}
+                              onClick={() => handleSizeChange(item.id, item.selectedSize || 'regular', sizeLabel)}
                               className={`rounded-lg border px-2 py-1.5 text-left text-[11px] font-semibold transition ${
                                 isSelected
                                   ? 'border-orange-600 bg-orange-50 text-orange-700'
@@ -360,11 +444,11 @@ const Order = ({
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Add Extras</p>
                     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                       {extrasOptions.map(extra => {
-                        const isSelected = selectedExtras[item.id]?.[extra.id]
+                        const isSelected = selectedExtras[cartKey]?.[extra.id]
                         return (
                           <button
                             key={extra.id}
-                            onClick={() => toggleExtra(item.id, extra.id)}
+                            onClick={() => toggleExtra(cartKey, extra.id)}
                             className={`rounded-lg border px-2 py-1.5 text-left text-[11px] font-semibold transition ${
                               isSelected
                                 ? 'border-orange-600 bg-orange-50 text-orange-700'
@@ -383,7 +467,7 @@ const Order = ({
 
                   <div className="flex items-end justify-between gap-3">
                     <button
-                      onClick={() => toggleNoteEditor(item.id)}
+                      onClick={() => toggleNoteEditor(cartKey)}
                       className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700"
                     >
                       <StickyNote className="h-4 w-4" />
@@ -412,26 +496,26 @@ const Order = ({
                     </div>
                   )}
 
-                  {openNoteEditors[item.id] && (
+                  {openNoteEditors[cartKey] && (
                     <div className="mt-2 rounded-lg border border-gray-200 bg-white p-2">
                       <textarea
                         rows={3}
                         placeholder="Separate each item by comma or new line"
-                        value={noteDrafts[item.id] || ''}
-                        onChange={(e) => setNoteDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                        value={noteDrafts[cartKey] || ''}
+                        onChange={(e) => setNoteDrafts(prev => ({ ...prev, [cartKey]: e.target.value }))}
                         className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
                       />
                       <p className="mt-1 text-[10px] font-semibold text-orange-700">Detected extras: cheese (₹40), paneer (₹60), chicken (₹90), sauce (₹20), mayo (₹15), butter (₹30), cream (₹25)</p>
                       <p className="mt-1 text-[11px] text-gray-500">Example: less spicy, cheese, no onion, paneer</p>
                       <div className="mt-2 flex items-center justify-end gap-2">
                         <button
-                          onClick={() => setOpenNoteEditors(prev => ({ ...prev, [item.id]: false }))}
+                          onClick={() => setOpenNoteEditors(prev => ({ ...prev, [cartKey]: false }))}
                           className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600"
                         >
                           Cancel
                         </button>
                         <button
-                          onClick={() => handleSaveInstructions(item.id)}
+                          onClick={() => handleSaveInstructions(cartKey)}
                           className="rounded-md bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white"
                         >
                           Save Note
@@ -440,16 +524,16 @@ const Order = ({
                     </div>
                   )}
 
-                  {itemNotes[item.id] && (
+                  {itemNotes[cartKey] && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {parseInstructions(itemNotes[item.id]).map((instruction, index) => (
+                      {parseInstructions(itemNotes[cartKey]).map((instruction, index) => (
                         <span
-                          key={`${item.id}-note-${index}`}
+                          key={`${cartKey}-note-${index}`}
                           className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-medium text-orange-700"
                         >
                           {instruction}
                           <button
-                            onClick={() => handleRemoveInstruction(item.id, index)}
+                            onClick={() => handleRemoveInstruction(cartKey, index)}
                             className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-orange-100 text-orange-700"
                           >
                             <X className="h-3 w-3" />
@@ -524,14 +608,15 @@ const Order = ({
                 </div>
 
                 <div className="mt-2 max-h-36 space-y-1.5 overflow-y-auto rounded-lg border border-orange-100 bg-white/80 p-2">
-                  {cart.map(item => {
+                  {normalizedCart.map(item => {
+                    const cartKey = getCartItemKey(item.id, item.selectedSize || 'regular')
                     const selectedSize = item.selectedSize || 'regular'
-                    const selectedExtrasList = Object.entries(selectedExtras[item.id] || {})
+                    const selectedExtrasList = Object.entries(selectedExtras[cartKey] || {})
                       .filter((entry) => entry[1])
                       .map(([extraId]) => extrasOptions.find(extra => extra.id === extraId)?.label)
                       .filter(Boolean)
 
-                    const notesList = parseInstructions(itemNotes[item.id])
+                    const notesList = parseInstructions(itemNotes[cartKey])
 
                     return (
                       <div key={`checkout-summary-${item.id}`} className="rounded-md border border-orange-100 bg-white px-2 py-1.5">

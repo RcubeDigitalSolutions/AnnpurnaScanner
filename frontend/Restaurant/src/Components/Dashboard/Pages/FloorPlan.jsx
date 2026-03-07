@@ -9,6 +9,7 @@ const FloorPlanPage = () => {
   const [tables, setTables] = useState([]);
   const [tableLimit, setTableLimit] = useState(null);
   const [restaurantId, setRestaurantId] = useState(null);
+  const publicMenuBaseUrl = (import.meta.env.VITE_PUBLIC_MENU_BASE_URL || window.location.origin).replace(/\/$/, '');
 
   // fetch tables and restaurant info (for limit) on mount
   useEffect(() => {
@@ -111,9 +112,14 @@ const FloorPlanPage = () => {
   };
 
   // build a URL that redirects customers to the public menu page
+  const getTableMenuLink = (table) => {
+    if (!restaurantId) return '';
+    return `${publicMenuBaseUrl}/menu/${restaurantId}/${table.number}`;
+  };
+
   const getTableQrUrl = (table) => {
     if (!restaurantId) return '';
-    const link = `${window.location.origin}/menu/${restaurantId}/${table.number}`;
+    const link = getTableMenuLink(table);
     const encoded = encodeURIComponent(link);
     return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encoded}`;
   };
@@ -297,6 +303,14 @@ const FloorPlanPage = () => {
                             className="w-28 h-28 rounded-lg border border-[#e6dfdc] bg-white"
                           />
                         </div>
+                        <p className="mt-2 break-all text-[10px] text-slate-500 text-center">
+                          {getTableMenuLink(table)}
+                        </p>
+                        {getTableMenuLink(table).includes('localhost') && (
+                          <p className="mt-1 text-[10px] text-rose-600 text-center font-semibold">
+                            This QR uses localhost and may not open on phone. Use LAN URL in VITE_PUBLIC_MENU_BASE_URL.
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div className="mb-1 border border-dashed border-[#e6dfdc] rounded-xl p-3.5 bg-[#faf8f7]">
