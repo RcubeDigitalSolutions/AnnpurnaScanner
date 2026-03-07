@@ -2,12 +2,6 @@ import React, { useState } from 'react'
 import { X, StickyNote, User, Phone } from 'lucide-react'
 import restaurantApi from '../../../api/restaurantApi'
 
-const sizeOptions = [
-  { value: 'regular', label: 'Regular', addOn: 0 },
-  { value: 'medium', label: 'Medium', addOn: 40 },
-  { value: 'large', label: 'Large', addOn: 80 }
-]
-
 const extrasOptions = [
   { id: 'cheese', label: 'Cheese', amount: 40 },
   { id: 'paneer', label: 'Paneer', amount: 60 },
@@ -33,13 +27,32 @@ const Order = ({
   setCart,
   selectedExtras,
   setSelectedExtras
-  , sizeSelection, setSizeSelection
+  , setSizeSelection
 }) => {
   const [openNoteEditors, setOpenNoteEditors] = useState({})
   const [noteDrafts, setNoteDrafts] = useState({})
   const [showCheckoutForm, setShowCheckoutForm] = useState(false)
   const [customerDetails, setCustomerDetails] = useState({ name: '', phone: '' })
+  const [orderNumber, setOrderNumber] = useState('')
   const [formErrors, setFormErrors] = useState({})
+
+  const generateOrderNumber = async () => {
+    try {
+      const res = await restaurantApi.generateOrderNumber()
+      const next = String(res?.data?.orderNumber || '')
+      setOrderNumber(next)
+      setFormErrors((prev) => {
+        const nextErrors = { ...prev }
+        delete nextErrors.orderNumber
+        return nextErrors
+      })
+    } catch {
+      const ev = new CustomEvent('app-toast', {
+        detail: { message: 'Unable to generate order number. Please try again.', type: 'error' },
+      })
+      window.dispatchEvent(ev)
+    }
+  }
 
   const getSizeAddOn = (item, selectedSize) => {
     if (!item || !item.sizes) return 0
@@ -53,33 +66,10 @@ const Order = ({
   const getItemExtrasTotal = (item) => {
     const itemExtras = selectedExtras[item.id] || {}
     return Object.entries(itemExtras)
-      .filter(([_, isSelected]) => isSelected)
+      .filter((entry) => entry[1])
       .reduce((sum, [extraId]) => {
         // support dynamic size add-ons encoded as `size_<Name>`
         if (extraId.startsWith('size_')) {
-                      {/* Size-based add-ons (Half/Full) exposed here as extras */}
-                      {(item.sizes || [])
-                        .filter(s => ['half', 'full'].includes(((s.name || s.quantity) + '').toLowerCase()))
-                        .map(s => {
-                          const key = `size_${s.name || s.quantity}`
-                          const isSelected = !!selectedExtras[item.id]?.[key]
-                          const base = Number(item.price) || 0
-                          const amt = Math.max(0, (Number(s.price) || 0) - base)
-                          return (
-                            <button
-                              key={key}
-                              onClick={() => toggleExtra(item.id, key)}
-                              className={`rounded-lg border px-2 py-1.5 text-left text-[11px] font-semibold transition ${
-                                isSelected
-                                  ? 'border-orange-600 bg-orange-50 text-orange-700'
-                                  : 'border-gray-300 bg-white text-gray-600'
-                              }`}
-                            >
-                              <span className="block">{s.name || s.quantity}</span>
-                              <span className="block text-[10px] font-medium opacity-80">+₹{amt}</span>
-                            </button>
-                          )
-                        })}
           const sizeName = extraId.slice(5)
           const sizeObj = (item.sizes || []).find(s => (s.name || s.quantity || '').toString() === sizeName)
           if (sizeObj) {
@@ -124,7 +114,7 @@ const Order = ({
     // also sync the menu-level size selection so menu buttons reflect this choice
     try {
       setSizeSelection(prev => ({ ...prev, [itemId]: sizeValue }))
-    } catch (e) {
+    } catch {
       // noop if parent didn't pass setSizeSelection
     }
   }
@@ -212,6 +202,10 @@ const Order = ({
       errors.phone = 'Phone number must be 10 digits'
     }
 
+    if (!/^\d{4}$/.test(orderNumber)) {
+      errors.orderNumber = 'Generate a valid 4-digit order number'
+    }
+
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -231,10 +225,6 @@ const Order = ({
         phone: customerDetails.phone.trim()
       },
       items: cart.map(item => {
-        const selectedExtraIds = Object.entries(selectedExtras[item.id] || {})
-          .filter(([_, isSelected]) => isSelected)
-          .map(([extraId]) => extraId)
-
         // compute numeric add-on value so server can reconstruct price correctly
         const sizeAddOn = getSizeAddOn(item, item.selectedSize);
         const extrasAddOn = getItemExtrasTotal(item);
@@ -249,7 +239,8 @@ const Order = ({
           notes: parseInstructions(itemNotes[item.id])
         }
       }),
-      totalAmount: getTotalAmount()
+      totalAmount: getTotalAmount(),
+      orderNumber,
     }
 
     try {
@@ -265,6 +256,7 @@ const Order = ({
     setItemNotes({})
     setSelectedExtras({})
     setCustomerDetails({ name: '', phone: '' })
+    setOrderNumber('')
     setShowCheckoutForm(false)
     setShowCartModal(false)
   }
@@ -514,11 +506,28 @@ const Order = ({
                   <span className="font-bold text-orange-700">₹ {getTotalAmount().toFixed(2)}</span>
                 </div>
 
+                <div className="mt-2 rounded-lg border border-orange-100 bg-white px-2 py-2">
+                  <p className="text-[11px] font-semibold text-gray-700">Order Number</p>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="rounded-md bg-gray-100 px-2 py-1 text-sm font-bold tracking-widest text-gray-800">
+                      {orderNumber || '----'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={generateOrderNumber}
+                      className="rounded-md bg-orange-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-orange-700"
+                    >
+                      Generate Order Number
+                    </button>
+                  </div>
+                  {formErrors.orderNumber && <p className="mt-1 text-xs font-medium text-red-500">{formErrors.orderNumber}</p>}
+                </div>
+
                 <div className="mt-2 max-h-36 space-y-1.5 overflow-y-auto rounded-lg border border-orange-100 bg-white/80 p-2">
                   {cart.map(item => {
                     const selectedSize = item.selectedSize || 'regular'
                     const selectedExtrasList = Object.entries(selectedExtras[item.id] || {})
-                      .filter(([_, isSelected]) => isSelected)
+                      .filter((entry) => entry[1])
                       .map(([extraId]) => extrasOptions.find(extra => extra.id === extraId)?.label)
                       .filter(Boolean)
 

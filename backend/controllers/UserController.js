@@ -83,11 +83,35 @@ exports.getRestaurantInfo = async (req, res) => {
     }
 };
 
+// generate a unique 4-digit order number
+exports.generateOrderNumber = async (req, res) => {
+    try {
+        let orderNumber = '';
+        let exists = true;
+        let attempts = 0;
+
+        while (exists && attempts < 100) {
+            attempts += 1;
+            orderNumber = String(Math.floor(1000 + Math.random() * 9000));
+            const existing = await Order.findOne({ orderNumber }).lean();
+            exists = !!existing;
+        }
+
+        if (exists) {
+            return res.status(503).json({ message: 'Unable to generate unique order number, please try again.' });
+        }
+
+        res.status(200).json({ orderNumber });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 // create order from user side
 exports.createOrder = async (req, res) => {
     try {
-        const { restaurantId, tableNumber, customer, items, totalAmount } = req.body;
-        if (!restaurantId || !tableNumber || !customer || !items || !totalAmount) {
+        const { restaurantId, tableNumber, customer, items, totalAmount, orderNumber } = req.body;
+        if (!restaurantId || !tableNumber || !customer || !items || !totalAmount || !orderNumber) {
             return res.status(400).json({ message: "Missing order data" });
         }
         // ensure numeric values are properly parsed and validated
@@ -99,11 +123,20 @@ exports.createOrder = async (req, res) => {
         if (isNaN(parsedTotal)) {
             return res.status(400).json({ message: 'Invalid total amount' });
         }
+        const normalizedOrderNumber = String(orderNumber).trim();
+        if (!/^\d{4}$/.test(normalizedOrderNumber)) {
+            return res.status(400).json({ message: 'Order number must be a unique 4-digit value' });
+        }
+        const existing = await Order.findOne({ orderNumber: normalizedOrderNumber }).lean();
+        if (existing) {
+            return res.status(409).json({ message: 'Order number already exists. Please generate again.' });
+        }
         const orderData = {
             restaurant: restaurantId,
             tableNumber: parsedTable,
             customerName: customer.name,
             phoneNumber: customer.phone,
+            orderNumber: normalizedOrderNumber,
             items: items.map(i => ({
                 name: i.name,
                 size: i.selectedSize || 'regular',

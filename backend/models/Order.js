@@ -25,6 +25,13 @@ const OrderSchema = new mongoose.Schema(
       trim: true,
     },
 
+    orderNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      match: /^\d{4}$/,
+    },
+
     items: [
       {
         name: { type: String, required: true },
@@ -47,5 +54,7 @@ const OrderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+OrderSchema.index({ orderNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model("Order", OrderSchema);

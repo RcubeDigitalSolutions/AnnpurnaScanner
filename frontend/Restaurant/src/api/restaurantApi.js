@@ -15,6 +15,7 @@ export const createCategory = (data) => API.post('/restaurants/categories', data
 
 // Order endpoints (restaurant side)
 export const getOrders = () => API.get('/restaurants/orders');
+export const getDashboard = () => API.get('/restaurants/dashboard');
 export const updateOrderStatus = (id, data) => API.put(`/restaurants/orders/${id}/status`, data);
 
 // Table endpoints (floor plan management)
@@ -24,6 +25,7 @@ export const updateTable = (id, data) => API.put(`/restaurants/tables/${id}`, da
 export const deleteTable = (id) => API.delete(`/restaurants/tables/${id}`);
 
 // Order endpoints (user side) - mounted on /orders
+export const generateOrderNumber = () => API.get('/orders/generate-number');
 export const createOrder = (data) => API.post('/orders', data);
 
 // Public menu access for guests
@@ -47,6 +49,7 @@ export default {
   createTable,
   updateTable,
   deleteTable,
+  generateOrderNumber,
   createOrder,
   getPublicMenu,
   getRestaurantInfo,

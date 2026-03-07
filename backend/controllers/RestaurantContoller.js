@@ -260,8 +260,73 @@ exports.createCategory = async (req, res) => {
 exports.getOrders = async (req, res) => {
     try {
         const restaurantId = req.restaurant.id;
-        const orders = await Order.find({ restaurant: restaurantId });
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const orders = await Order.find({
+            restaurant: restaurantId,
+            createdAt: { $gte: startOfDay, $lte: endOfDay },
+        }).sort({ createdAt: -1 });
         res.status(200).json({ orders });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// return aggregated dashboard metrics and orders
+exports.getDashboard = async (req, res) => {
+    try {
+        const restaurantId = req.restaurant.id;
+        const orders = await Order.find({ restaurant: restaurantId });
+
+        const isRevenueStatus = (status) => {
+            const normalized = String(status || '').toLowerCase();
+            return normalized === 'completed' || normalized === 'paid';
+        };
+
+        const totalOrders = orders.length;
+        const today = new Date().toDateString();
+        const revenueToday = orders
+            .filter(o => new Date(o.createdAt).toDateString() === today && isRevenueStatus(o.status))
+            .reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+        const activeOrdersCount = orders.filter(o => ['pending','preparing','served'].includes(o.status)).length;
+
+        // monthly income
+        const months = {};
+        orders.forEach((o) => {
+            if (!o.createdAt || !o.totalPrice || !isRevenueStatus(o.status)) return;
+            const date = new Date(o.createdAt);
+            const key = date.toLocaleString('default', { month: 'short' });
+            months[key] = (months[key] || 0) + o.totalPrice;
+        });
+        const monthOrder = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const incomeData = monthOrder
+            .filter(m => months[m] !== undefined)
+            .map(m => ({ month: m, amount: months[m] }));
+
+        // top categories
+        const counts = {};
+        orders.forEach(o => {
+            o.items?.forEach(i => {
+                counts[i.name] = (counts[i.name] || 0) + (i.quantity || 1);
+            });
+        });
+        const topCategories = Object.entries(counts)
+            .sort((a,b) => b[1] - a[1])
+            .slice(0,4)
+            .map(([name, cnt]) => ({ name, share: `${cnt}` }));
+
+        res.status(200).json({
+            totalOrders,
+            revenueToday,
+            activeOrders: activeOrdersCount,
+            incomeData,
+            topCategories,
+            orders,
+        });
     } catch (error) {
         res.status(500).json({ message: "Server error" });
     }

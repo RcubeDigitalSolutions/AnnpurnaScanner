@@ -40,6 +40,7 @@ const OrderDetailsPanel = ({ isOpen, order, onClose, onUpdateStatus }) => {
 
   // normalize commonly used fields (backend/older callers may use different names)
   const displayId = order.id || order._id || '';
+  const displayOrderNumber = order.orderNumber || '';
   const displayPhone = order.phone || order.phoneNumber || '';
   const itemsList = order.items || [];
   const getItemQty = (it) => (it.quantity ?? it.qty ?? 0);
@@ -59,6 +60,9 @@ const OrderDetailsPanel = ({ isOpen, order, onClose, onUpdateStatus }) => {
               </span>
             </div>
             <p className="text-[11px] font-semibold text-slate-500">Order Details & Management</p>
+            <p className="text-[11px] font-semibold text-orange-600 mt-1">
+              Order No: {displayOrderNumber || 'N/A'}
+            </p>
           </div>
           <button
             onClick={onClose}

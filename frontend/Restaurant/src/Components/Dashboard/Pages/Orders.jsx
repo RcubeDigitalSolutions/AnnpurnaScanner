@@ -46,12 +46,17 @@ const Orders = () => {
       try {
         const res = await restaurantApi.getOrders();
         if (!mounted) return;
-        const mapped = (res.data.orders || []).map(o => ({
-          id: o._id,
+        const today = new Date().toDateString();
+        const mapped = (res.data.orders || [])
+          .filter((o) => o.createdAt && new Date(o.createdAt).toDateString() === today)
+          .map(o => ({
+            id: o._id,
+            orderNumber: o.orderNumber,
           customerName: o.customerName,
           phone: o.phoneNumber,
           tableNo: `T-${o.tableNumber}`,
           status: o.status,
+          createdAt: o.createdAt,
           items: (o.items || []).map(i => ({ name: i.name, size: i.size, qty: i.quantity })),
         }));
         setOrders(mapped);

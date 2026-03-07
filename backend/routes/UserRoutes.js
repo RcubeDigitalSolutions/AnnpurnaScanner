@@ -8,6 +8,8 @@ router.get("/restaurants", UserController.getAllRestaurants);
 router.get("/restaurants/:restaurantId/menu", UserController.getRestaurantMenu);
 // public restaurant info (name, etc.)
 router.get("/restaurants/:restaurantId", UserController.getRestaurantInfo);
+// generate unique 4-digit order number
+router.get("/orders/generate-number", UserController.generateOrderNumber);
 //create order (user facing)
 router.post("/orders", UserController.createOrder);
 //get menu items by category
