@@ -2,16 +2,6 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react'
 import { X, StickyNote, User, Phone } from 'lucide-react'
 import restaurantApi from '../../../api/restaurantApi'
 
-const extrasOptions = [
-  { id: 'cheese', label: 'Cheese', amount: 40 },
-  { id: 'paneer', label: 'Paneer', amount: 60 },
-  { id: 'chicken', label: 'Chicken', amount: 90 },
-  { id: 'sauce', label: 'Sauce', amount: 20 },
-  { id: 'butter', label: 'Butter', amount: 30 },
-  { id: 'mayo', label: 'Mayo', amount: 15 },
-  { id: 'cream', label: 'Cream', amount: 25 }
-]
-
 const Order = ({
   cart,
   tableNumber,
@@ -23,7 +13,6 @@ const Order = ({
   itemNotes,
   setItemNotes,
   getTotalAmount,
-  getExtraCharges,
   setCart,
   selectedExtras,
   setSelectedExtras,
@@ -38,6 +27,22 @@ const Order = ({
   const [formErrors, setFormErrors] = useState({})
 
   const getCartItemKey = (itemId, selectedSize = 'regular') => `${itemId}__${selectedSize}`
+
+  const getItemExtrasOptions = (item) => {
+    const configured = Array.isArray(item?.extras) ? item.extras : []
+
+    return configured
+      .map((extra) => {
+        const name = String(extra?.name || '').trim()
+        if (!name) return null
+        return {
+          id: name.toLowerCase().replace(/\s+/g, '_'),
+          label: name,
+          amount: Number(extra?.price) || 0,
+        }
+      })
+      .filter(Boolean)
+  }
 
   const normalizeCartItems = useCallback((items) => {
     const byKey = new Map()
@@ -127,7 +132,7 @@ const Order = ({
           }
           return sum
         }
-        const extra = extrasOptions.find(e => e.id === extraId)
+        const extra = getItemExtrasOptions(item).find(e => e.id === extraId)
         return sum + (extra?.amount || 0)
       }, 0)
   }
@@ -307,12 +312,19 @@ const Order = ({
         // compute numeric add-on value so server can reconstruct price correctly
         const sizeAddOn = getSizeAddOn(item, item.selectedSize);
         const extrasAddOn = getItemExtrasTotal(item);
+        const cartKey = getCartItemKey(item.id, item.selectedSize || 'regular');
+        const selectedExtrasPayload = Object.entries(selectedExtras[cartKey] || {})
+          .filter((entry) => entry[1])
+          .map(([extraId]) => getItemExtrasOptions(item).find((extra) => extra.id === extraId))
+          .filter(Boolean)
+          .map((extra) => ({ name: extra.label, price: Number(extra.amount) || 0 }));
 
         return {
           id: item.id,
           name: item.name,
           quantity: item.quantity,
           selectedSize: item.selectedSize || 'regular',
+          extras: selectedExtrasPayload,
           price: item.price || 0,
           addOns: sizeAddOn + extrasAddOn,
           notes: parseInstructions(itemNotes[getCartItemKey(item.id, item.selectedSize || 'regular')])
@@ -372,7 +384,7 @@ const Order = ({
         <div className="overflow-y-auto px-4 py-4 sm:px-5">
           {normalizedCart.map(item => {
             const cartKey = getCartItemKey(item.id, item.selectedSize || 'regular')
-            const extraChargeInfo = getExtraCharges(itemNotes[cartKey])
+            const itemExtrasOptions = getItemExtrasOptions(item)
 
             return (
             <div key={`${cartKey}-${item.name}`} className="mb-3 rounded-xl border border-gray-100 bg-gray-50/40 p-3 last:mb-0">
@@ -442,27 +454,31 @@ const Order = ({
 
                   <div className="mb-3">
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Add Extras</p>
-                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                      {extrasOptions.map(extra => {
-                        const isSelected = selectedExtras[cartKey]?.[extra.id]
-                        return (
-                          <button
-                            key={extra.id}
-                            onClick={() => toggleExtra(cartKey, extra.id)}
-                            className={`rounded-lg border px-2 py-1.5 text-left text-[11px] font-semibold transition ${
-                              isSelected
-                                ? 'border-orange-600 bg-orange-50 text-orange-700'
-                                : 'border-gray-300 bg-white text-gray-600'
-                            }`}
-                          >
-                            <span className="block">{extra.label}</span>
-                            <span className="block text-[10px] font-medium opacity-80">
-                              +₹{extra.amount}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
+                    {itemExtrasOptions.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                        {itemExtrasOptions.map(extra => {
+                          const isSelected = selectedExtras[cartKey]?.[extra.id]
+                          return (
+                            <button
+                              key={extra.id}
+                              onClick={() => toggleExtra(cartKey, extra.id)}
+                              className={`rounded-lg border px-2 py-1.5 text-left text-[11px] font-semibold transition ${
+                                isSelected
+                                  ? 'border-orange-600 bg-orange-50 text-orange-700'
+                                  : 'border-gray-300 bg-white text-gray-600'
+                              }`}
+                            >
+                              <span className="block">{extra.label}</span>
+                              <span className="block text-[10px] font-medium opacity-80">
+                                +₹{extra.amount}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500">No extras available for this item</p>
+                    )}
                   </div>
 
                   <div className="flex items-end justify-between gap-3">
@@ -480,22 +496,6 @@ const Order = ({
                     </div>
                   </div>
 
-                  {extraChargeInfo.total > 0 && (
-                    <div className="mt-1 rounded-md bg-orange-50 px-2 py-1.5 text-[11px] text-orange-700">
-                      <p className="font-semibold">Extra Charges +₹{extraChargeInfo.total} each</p>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {extraChargeInfo.matchedExtras.map((extra, index) => (
-                          <span
-                            key={`${item.id}-extra-${index}`}
-                            className="rounded-full bg-white px-2 py-0.5 font-medium"
-                          >
-                            {extra.label} (+₹{extra.amount})
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {openNoteEditors[cartKey] && (
                     <div className="mt-2 rounded-lg border border-gray-200 bg-white p-2">
                       <textarea
@@ -505,7 +505,9 @@ const Order = ({
                         onChange={(e) => setNoteDrafts(prev => ({ ...prev, [cartKey]: e.target.value }))}
                         className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
                       />
-                      <p className="mt-1 text-[10px] font-semibold text-orange-700">Detected extras: cheese (₹40), paneer (₹60), chicken (₹90), sauce (₹20), mayo (₹15), butter (₹30), cream (₹25)</p>
+                      <p className="mt-1 text-[10px] font-semibold text-orange-700">
+                        Available extras: {itemExtrasOptions.length > 0 ? itemExtrasOptions.map((extra) => `${extra.label} (₹${extra.amount})`).join(', ') : 'None'}
+                      </p>
                       <p className="mt-1 text-[11px] text-gray-500">Example: less spicy, cheese, no onion, paneer</p>
                       <div className="mt-2 flex items-center justify-end gap-2">
                         <button
@@ -613,7 +615,7 @@ const Order = ({
                     const selectedSize = item.selectedSize || 'regular'
                     const selectedExtrasList = Object.entries(selectedExtras[cartKey] || {})
                       .filter((entry) => entry[1])
-                      .map(([extraId]) => extrasOptions.find(extra => extra.id === extraId)?.label)
+                      .map(([extraId]) => getItemExtrasOptions(item).find(extra => extra.id === extraId)?.label)
                       .filter(Boolean)
 
                     const notesList = parseInstructions(itemNotes[cartKey])

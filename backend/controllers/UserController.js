@@ -157,7 +157,15 @@ exports.createOrder = async (req, res) => {
             orderNumber: normalizedOrderNumber,
             items: items.map(i => ({
                 name: i.name,
-                size: i.selectedSize || 'regular',
+                size: i.selectedSize || i.size || 'regular',
+                extras: Array.isArray(i.extras)
+                    ? i.extras
+                          .map((extra) => ({
+                              name: String(extra?.name || '').trim(),
+                              price: Number(extra?.price) || 0,
+                          }))
+                          .filter((extra) => extra.name)
+                    : [],
                 // price plus any add ons; guard against NaN
                 price: (() => {
                     const base = Number(i.price) || 0;

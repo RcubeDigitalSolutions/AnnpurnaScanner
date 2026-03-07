@@ -66,6 +66,12 @@ const Orders = () => {
         status: normalizeBoardStatus(incomingOrder.status),
         createdAt: incomingOrder.createdAt,
         items: (incomingOrder.items || []).map((i) => ({ name: i.name, size: i.size, qty: i.quantity })),
+        items: (incomingOrder.items || []).map((i) => ({
+          name: i.name,
+          size: i.size,
+          qty: i.quantity,
+          extras: Array.isArray(i.extras) ? i.extras : [],
+        })),
       };
 
       const isToday = nextOrder.createdAt && new Date(nextOrder.createdAt).toDateString() === new Date().toDateString();
@@ -103,7 +109,12 @@ const Orders = () => {
           tableNo: `T-${o.tableNumber}`,
           status: normalizeBoardStatus(o.status),
           createdAt: o.createdAt,
-          items: (o.items || []).map(i => ({ name: i.name, size: i.size, qty: i.quantity })),
+          items: (o.items || []).map(i => ({
+            name: i.name,
+            size: i.size,
+            qty: i.quantity,
+            extras: Array.isArray(i.extras) ? i.extras : [],
+          })),
         }));
         setOrders(mapped);
 
@@ -157,7 +168,7 @@ const Orders = () => {
     const query = searchTerm.toLowerCase();
     return orders.filter(
       (order) =>
-        order.id.toLowerCase().includes(query) ||
+        String(order.orderNumber || '').toLowerCase().includes(query) ||
         order.customerName.toLowerCase().includes(query) ||
         order.phone.includes(query) ||
         order.items?.some((item) => item.name.toLowerCase().includes(query))
@@ -251,7 +262,7 @@ const Orders = () => {
                     {(groupedOrders[column.key] || []).map((order) => (
                       <article key={order.id} className="w-full rounded-lg border border-[#e2dad7] bg-[#fffdfc] px-2.5 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-[9px] font-black tracking-wide text-slate-500">{order.id}</p>
+                          <p className="text-[9px] font-black tracking-wide text-slate-500">Order No: {order.orderNumber || 'N/A'}</p>
                           <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600">
                             {order.tableNo || 'T-N/A'}
                           </span>

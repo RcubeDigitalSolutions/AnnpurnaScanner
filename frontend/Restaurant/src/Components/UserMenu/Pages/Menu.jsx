@@ -46,7 +46,7 @@ const Menu = () => {
     completed: 'Complete',
     paid: 'Complete',
     complete: 'Complete',
-    cancelled: 'Cancelled',
+    cancelled: 'Cancel',
   }
 
   const getCustomerOrderStatusLabel = (statusValue) => {
@@ -84,6 +84,15 @@ const Menu = () => {
     return 0;
   };
 
+  const getDefaultSizeKey = (itemOrId) => {
+    const resolvedItem = typeof itemOrId === 'string'
+      ? menuItems.find((menuItem) => menuItem.id === itemOrId)
+      : itemOrId;
+
+    const firstSize = resolvedItem?.sizes?.[0];
+    return firstSize ? (firstSize.name || firstSize.quantity || 'regular') : 'regular';
+  };
+
   const filteredItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = selectedCategory === 'All' || item.category.name === selectedCategory
@@ -92,7 +101,7 @@ const Menu = () => {
   })
 
   const addToCart = (item, sizeKeyOverride) => {
-    const sizeKey = sizeKeyOverride || sizeSelection[item.id] || item.selectedSize || 'regular';
+    const sizeKey = sizeKeyOverride || sizeSelection[item.id] || item.selectedSize || getDefaultSizeKey(item);
     const price = getItemPrice({ ...item, selectedSize: sizeKey });
     const existingItem = cart.find(cartItem => cartItem.id === item.id && cartItem.selectedSize === sizeKey)
     if (existingItem) {
@@ -111,7 +120,7 @@ const Menu = () => {
   }
 
   const removeFromCart = (itemId, sizeKeyOverride) => {
-    const sizeKey = sizeKeyOverride || sizeSelection[itemId] || 'regular';
+    const sizeKey = sizeKeyOverride || sizeSelection[itemId] || getDefaultSizeKey(itemId);
     const existingItem = cart.find(cartItem => cartItem.id === itemId && cartItem.selectedSize === sizeKey);
     if (!existingItem) return;
     if (existingItem.quantity === 1) {
@@ -126,7 +135,7 @@ const Menu = () => {
   }
 
   const getItemQuantity = (itemId, itemName) => {
-    const sizeKey = sizeSelection[itemId] || 'regular';
+    const sizeKey = sizeSelection[itemId] || getDefaultSizeKey(itemId);
     const item = cart.find(cartItem =>
       cartItem.id === itemId &&
       cartItem.selectedSize === sizeKey &&
@@ -135,62 +144,28 @@ const Menu = () => {
     return item ? item.quantity : 0
   }
 
-  const getExtraCharges = (noteText = '') => {
-    const extraChargeRules = [
-      { label: 'Extra Cheese', amount: 40, keywords: ['cheese', 'extra cheese'] },
-      { label: 'Extra Sauce', amount: 20, keywords: ['sauce', 'extra sauce', 'gravy'] },
-      { label: 'Extra Mayo', amount: 15, keywords: ['mayo', 'mayonnaise', 'extra mayo'] },
-      { label: 'Extra Dip', amount: 25, keywords: ['dip', 'extra dip'] },
-      { label: 'Extra Paneer', amount: 60, keywords: ['paneer', 'extra paneer'] },
-      { label: 'Extra Chicken', amount: 90, keywords: ['chicken', 'extra chicken', 'double chicken'] },
-      { label: 'Extra Butter', amount: 30, keywords: ['butter', 'extra butter'] },
-      { label: 'Extra Cream', amount: 25, keywords: ['cream', 'extra cream'] }
-    ]
-
-    const instructions = noteText
-      .split(/\n|,/)
-      .map(instruction => instruction.trim().toLowerCase())
-      .filter(Boolean)
-
-    const matchedExtras = []
-
-    instructions.forEach(instruction => {
-      const rule = extraChargeRules.find(extraRule =>
-        extraRule.keywords.some(keyword => instruction.includes(keyword))
-      )
-
-      if (rule) {
-        matchedExtras.push({
-          label: rule.label,
-          amount: rule.amount,
-          instruction
-        })
-      }
-    })
-
-    const total = matchedExtras.reduce((sum, item) => sum + item.amount, 0)
-    return { total, matchedExtras }
-  }
-
   const getTotalAmount = () => {
-    const extrasOptions = [
-      { id: 'cheese', amount: 40 },
-      { id: 'paneer', amount: 60 },
-      { id: 'chicken', amount: 90 },
-      { id: 'sauce', amount: 20 },
-      { id: 'butter', amount: 30 },
-      { id: 'mayo', amount: 15 },
-      { id: 'cream', amount: 25 }
-    ]
-
     const getItemExtrasTotal = (item) => {
       const cartKey = `${item.id}__${item.selectedSize || 'regular'}`
       const itemExtras = selectedExtras[cartKey] || {}
       return Object.entries(itemExtras)
-        .filter(([_, isSelected]) => isSelected)
+        .filter((entry) => entry[1])
         .reduce((sum, [extraId]) => {
-          const extra = extrasOptions.find(e => e.id === extraId)
-          return sum + (extra?.amount || 0)
+          if (extraId.startsWith('size_')) {
+            const sizeName = extraId.slice(5)
+            const sizeObj = (item.sizes || []).find(s => (s.name || s.quantity || '') === sizeName)
+            if (!sizeObj) return sum
+            const base = Number(item.price) || 0
+            const sizePrice = Number(sizeObj.price) || 0
+            const diff = sizePrice - base
+            return sum + (diff > 0 ? diff : sizePrice)
+          }
+
+          const extra = (item.extras || []).find((option) => {
+            const normalized = (option?.name || '').trim().toLowerCase().replace(/\s+/g, '_')
+            return normalized === extraId
+          })
+          return sum + (Number(extra?.price) || 0)
         }, 0)
     }
 
@@ -660,27 +635,27 @@ const Menu = () => {
 
       {latestOrder && (
         <div className={`fixed left-4 right-4 z-40 ${cart.length > 0 && showMiniCart ? 'bottom-24' : 'bottom-4'}`}>
-          <div className="rounded-2xl border border-sky-200 bg-sky-50 px-3 py-3 shadow-lg">
+          <div className={`rounded-2xl px-3 py-3 shadow-lg ${String(latestOrder.status || '').toLowerCase() === 'cancelled' ? 'border border-red-700 bg-red-600' : 'border border-sky-200 bg-sky-50'}`}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-sky-800">
+                <p className={`truncate text-sm font-semibold ${String(latestOrder.status || '').toLowerCase() === 'cancelled' ? 'text-white' : 'text-sky-800'}`}>
                   Order #{latestOrder.orderNumber || 'N/A'} • ₹{Number(latestOrder.totalPrice || 0).toFixed(2)}
                 </p>
-                <p className="mt-0.5 text-xs text-sky-700">
+                <p className={`mt-0.5 text-xs font-semibold ${String(latestOrder.status || '').toLowerCase() === 'cancelled' ? 'text-white' : 'text-sky-700'}`}>
                   Status: {getCustomerOrderStatusLabel(latestOrder.status)}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowOrderDetails((prev) => !prev)}
-                className="rounded-xl bg-white px-3 py-1.5 text-xs font-semibold text-sky-700 border border-sky-200"
+                className={`rounded-xl bg-white px-3 py-1.5 text-xs font-semibold border ${String(latestOrder.status || '').toLowerCase() === 'cancelled' ? 'text-red-700 border-red-300' : 'text-sky-700 border-sky-200'}`}
               >
                 {showOrderDetails ? 'Hide Order' : 'Show Order'}
               </button>
             </div>
 
             {showOrderDetails && (
-              <div className="mt-3 rounded-xl border border-sky-200 bg-white p-2">
+              <div className={`mt-3 rounded-xl bg-white p-2 ${String(latestOrder.status || '').toLowerCase() === 'cancelled' ? 'border border-red-300' : 'border border-sky-200'}`}>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {(latestOrder.items || []).map((it, idx) => (
                     <div key={`${it.name}-${idx}`} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-2 py-2 text-xs">
@@ -709,7 +684,6 @@ const Menu = () => {
         itemNotes={itemNotes}
         setItemNotes={setItemNotes}
         getTotalAmount={getTotalAmount}
-        getExtraCharges={getExtraCharges}
         setCart={setCart}
         selectedExtras={selectedExtras}
         setSelectedExtras={setSelectedExtras}

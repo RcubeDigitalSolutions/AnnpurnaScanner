@@ -29,6 +29,14 @@ const MenuItemSchema = new mongoose.Schema(
         price: { type: Number, required: true },
       },
     ],
+
+    // optional add-ons shown in customer cart (e.g., extra cheese)
+    extras: [
+      {
+        name: { type: String, required: true, trim: true },
+        price: { type: Number, required: true, min: 0 },
+      },
+    ],
   },
   { timestamps: true }
 );

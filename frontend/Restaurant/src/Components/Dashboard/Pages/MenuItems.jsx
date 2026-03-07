@@ -39,6 +39,8 @@ const MenuManagementPage = () => {
 
   const [sizes, setSizes] = useState([]);
   const [newSize, setNewSize] = useState({ quantity: '', price: '' });
+  const [extras, setExtras] = useState([]);
+  const [newExtra, setNewExtra] = useState({ name: '', price: '' });
   const presetSizes = ['Small', 'Medium', 'Large', 'Half', 'Full', '250ml', '500ml', '1L'];
 
   useEffect(() => {
@@ -68,6 +70,7 @@ const MenuManagementPage = () => {
           available: typeof mi.available === 'boolean' ? mi.available : true,
           foodType: mi.foodType || 'veg',
           sizes: mi.sizes || [],
+          extras: mi.extras || [],
           raw: mi,
         })));
 
@@ -132,6 +135,10 @@ const MenuManagementPage = () => {
       description: itemForm.description,
       price: parseFloat(itemForm.price) || 0,
       sizes: finalSizes,
+      extras: (extras || []).map((extra) => ({
+        name: (extra.name || '').trim(),
+        price: Number(extra.price) || 0,
+      })).filter((extra) => extra.name),
       available: itemForm.available,
       foodType: itemForm.foodType,
     };
@@ -147,6 +154,7 @@ const MenuManagementPage = () => {
           available: updated.available !== undefined ? updated.available : i.available,
           foodType: updated.foodType || i.foodType,
           sizes: updated.sizes || [],
+          extras: updated.extras || [],
           raw: updated,
         }) : i));
       } else {
@@ -161,12 +169,15 @@ const MenuManagementPage = () => {
           available: typeof created.available === 'boolean' ? created.available : true,
           foodType: created.foodType || 'veg',
           sizes: created.sizes || [],
+          extras: created.extras || [],
           raw: created,
         }]);
       }
       setShowItemModal(false);
       setSizes([]);
       setNewSize({ quantity: '', price: '' });
+      setExtras([]);
+      setNewExtra({ name: '', price: '' });
     } catch (err) {
       // interceptor shows error toast
     }
@@ -185,6 +196,27 @@ const MenuManagementPage = () => {
       const sname = s.name || s.quantity || '';
       const key = `${sname}-${s.price}`;
       return !(sid === sizeId || sname === sizeId || key === sizeId);
+    }));
+  };
+
+  const addExtra = () => {
+    const name = (newExtra.name || '').trim();
+    const price = (newExtra.price || '').toString().trim();
+    if (!name || !price) return;
+
+    setExtras((prev) => [
+      ...prev,
+      { id: Date.now().toString(), name, price },
+    ]);
+    setNewExtra({ name: '', price: '' });
+  };
+
+  const removeExtra = (extraId) => {
+    setExtras((prev) => prev.filter((extra) => {
+      const eid = extra.id || extra._id || '';
+      const ename = extra.name || '';
+      const key = `${ename}-${extra.price}`;
+      return !(eid === extraId || ename === extraId || key === extraId);
     }));
   };
 
@@ -260,7 +292,7 @@ const MenuManagementPage = () => {
                 >
                   <div className="flex items-center gap-2.5">
                     <img
-                      src={cat.image || getAutoCategoryImage(cat.name)}
+                      src={cat.image || getFallbackCategoryImage(cat.name)}
                       alt={cat.name}
                       className="w-9 h-9 rounded-lg object-cover border border-[#e6dfdc]"
                       onError={(e) => {
@@ -290,7 +322,7 @@ const MenuManagementPage = () => {
                     <p className="text-xs text-slate-500 mt-1">{filteredItems.length} items in this category</p>
                   </div>
                   <button
-                    onClick={() => { setEditingItem(null); setItemForm({ name: '', price: '', description: '', available: true, foodType: 'veg' }); setSizes([]); setNewSize({ quantity: '', price: '' }); setShowItemModal(true); }}
+                    onClick={() => { setEditingItem(null); setItemForm({ name: '', price: '', description: '', available: true, foodType: 'veg' }); setSizes([]); setNewSize({ quantity: '', price: '' }); setExtras([]); setNewExtra({ name: '', price: '' }); setShowItemModal(true); }}
                     className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest inline-flex items-center gap-2 transition-all"
                   >
                     <Plus size={16} /> Add Item
@@ -307,7 +339,7 @@ const MenuManagementPage = () => {
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
-                            onClick={() => { setEditingItem(item); setItemForm({ name: item.name, price: (item.price||'').toString(), description: item.description, available: item.available, foodType: item.foodType || 'veg' }); setSizes(item.sizes || []); setShowItemModal(true); }}
+                            onClick={() => { setEditingItem(item); setItemForm({ name: item.name, price: (item.price||'').toString(), description: item.description, available: item.available, foodType: item.foodType || 'veg' }); setSizes(item.sizes || []); setExtras(item.extras || []); setNewExtra({ name: '', price: '' }); setShowItemModal(true); }}
                             className="p-1.5 text-slate-400 hover:text-orange-600 transition-colors"
                           >
                             <Edit2 size={14} />
@@ -584,6 +616,57 @@ const MenuManagementPage = () => {
                           ))}
                         </div>
                       )}
+
+                      <div className="rounded-xl border border-emerald-200 bg-linear-to-br from-emerald-50 to-white p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">Add Extras</h3>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Custom</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-3">
+                          <input
+                            type="text"
+                            value={newExtra.name}
+                            onChange={(e) => setNewExtra({ ...newExtra, name: e.target.value })}
+                            placeholder="Extra name (e.g. Cheese)"
+                            className="w-full px-3 py-2.5 rounded-lg text-sm border border-[#e6dfdc] outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-slate-700 font-bold"
+                          />
+                          <input
+                            type="number"
+                            value={newExtra.price}
+                            onChange={(e) => setNewExtra({ ...newExtra, price: e.target.value })}
+                            placeholder="Price"
+                            className="w-full px-3 py-2.5 rounded-lg text-sm border border-[#e6dfdc] outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={addExtra}
+                            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
+                          >
+                            Add
+                          </button>
+                        </div>
+
+                        {extras.length > 0 && (
+                          <div className="grid max-h-44 grid-cols-1 gap-2 overflow-y-auto rounded-xl border border-[#e6dfdc] bg-white p-2.5 sm:grid-cols-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#86efac #f1f5f9' }}>
+                            {extras.map((extra) => (
+                              <div key={extra.id || extra._id || `${(extra.name)}-${extra.price}`} className="flex items-center justify-between rounded-lg border border-[#e5efe9] bg-emerald-50 px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                                <div className="min-w-0 pr-2">
+                                  <p className="truncate text-xs font-black text-slate-900">{extra.name}</p>
+                                  <p className="text-[11px] font-black text-emerald-700">+₹{extra.price}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeExtra(extra.id || extra.name || `${extra.name}-${extra.price}`)}
+                                  className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </>

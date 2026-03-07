@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, CircleOff, Play, X, Phone, User, UtensilsCrossed, Hash } from 'lucide-react';
+import { CheckCircle2, CircleOff, Play, X, Phone, User, UtensilsCrossed } from 'lucide-react';
 
 const STATUS_LABELS = {
   pending: 'Pending',
@@ -39,12 +39,30 @@ const OrderDetailsPanel = ({ isOpen, order, onClose, onUpdateStatus }) => {
   const actions = getStatusActions(order.status);
 
   // normalize commonly used fields (backend/older callers may use different names)
-  const displayId = order.id || order._id || '';
   const displayOrderNumber = order.orderNumber || '';
   const displayPhone = order.phone || order.phoneNumber || '';
   const itemsList = order.items || [];
   const getItemQty = (it) => (it.quantity ?? it.qty ?? 0);
-  const getItemSize = (it) => (it.size || it.selectedSize || 'Regular');
+  const getItemSize = (it) => {
+    const rawSize = (it.size || it.selectedSize || '').toString().trim();
+    if (!rawSize) return 'N/A';
+    if (rawSize.toLowerCase() === 'regular') return 'Regular';
+    return rawSize;
+  };
+
+  const getItemExtras = (it) => {
+    if (!Array.isArray(it.extras)) return [];
+    return it.extras
+      .map((extra) => {
+        const name = String(extra?.name || '').trim();
+        if (!name) return null;
+        return {
+          name,
+          price: Number(extra?.price) || 0,
+        };
+      })
+      .filter(Boolean);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
@@ -53,8 +71,7 @@ const OrderDetailsPanel = ({ isOpen, order, onClose, onUpdateStatus }) => {
         <div className="border-b border-[#e8dfdc] bg-linear-to-r from-[#fff5f0] to-[#f8f1ed] px-6 py-4 flex items-center justify-between">
           <div>
               <div className="flex items-center gap-2 mb-1">
-              <Hash size={16} className="text-orange-600" />
-              <h2 className="text-xl font-black text-slate-900">{displayId}</h2>
+              <h2 className="text-xl font-black text-slate-900">{order.customerName || 'Customer'}</h2>
               <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase ${STATUS_BADGE_CLASS[order.status]}`}>
                 {STATUS_LABELS[order.status]}
               </span>
@@ -116,6 +133,19 @@ const OrderDetailsPanel = ({ isOpen, order, onClose, onUpdateStatus }) => {
                           <span>Qty</span>
                           <span className="text-orange-600">{getItemQty(item)}</span>
                         </div>
+
+                        {getItemExtras(item).length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            {getItemExtras(item).map((extra, extraIdx) => (
+                              <span
+                                key={`${item.name}-${index}-extra-${extraIdx}`}
+                                className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700"
+                              >
+                                {extra.name} (+₹{extra.price})
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

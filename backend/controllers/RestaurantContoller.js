@@ -148,7 +148,7 @@ exports.deleteCategory = async (req, res) => {
 //create menu item
 exports.createMenuItem = async (req, res) => {
     try {
-        const { categoryId, name, description, price, sizes, available, foodType } = req.body;
+        const { categoryId, name, description, price, sizes, extras, available, foodType } = req.body;
 
         const restaurantId = req.restaurant.id;
 
@@ -159,6 +159,14 @@ exports.createMenuItem = async (req, res) => {
             description: description || '',
             price: typeof price === 'number' ? price : 0,
             sizes: Array.isArray(sizes) ? sizes : [],
+                        extras: Array.isArray(extras)
+                            ? extras
+                                    .map((extra) => ({
+                                        name: String(extra?.name || '').trim(),
+                                        price: Number(extra?.price) || 0,
+                                    }))
+                                    .filter((extra) => extra.name)
+                            : [],
             available: typeof available === 'boolean' ? available : true,
             foodType: foodType || 'veg',
         };
@@ -193,6 +201,7 @@ exports.updateMenuItem = async (req, res) => {
           'description',
           'price',
           'sizes',
+                    'extras',
           'available',
           'foodType',
           'categoryId',
@@ -200,6 +209,15 @@ exports.updateMenuItem = async (req, res) => {
           if (req.body[field] !== undefined) {
             if (field === 'categoryId') {
               updateData.category = req.body.categoryId;
+                        } else if (field === 'extras') {
+                            updateData.extras = Array.isArray(req.body.extras)
+                                ? req.body.extras
+                                        .map((extra) => ({
+                                            name: String(extra?.name || '').trim(),
+                                            price: Number(extra?.price) || 0,
+                                        }))
+                                        .filter((extra) => extra.name)
+                                : [];
             } else {
               updateData[field] = req.body[field];
             }

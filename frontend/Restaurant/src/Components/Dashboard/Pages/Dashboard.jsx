@@ -138,6 +138,7 @@ const Dashboard = () => {
 
       return {
         id: o._id,
+        orderNumber: o.orderNumber,
         tableNumber: o.tableNumber?.toString().padStart(2,'0') || '',
         name,
         time,
@@ -301,7 +302,7 @@ const Dashboard = () => {
               <table className="w-full min-w-175">
                 <thead className="bg-[#f6f1ef] text-slate-500">
                   <tr>
-                    <th className="text-left px-4 py-3 text-[11px] font-semibold">ORDER ID</th>
+                    <th className="text-left px-4 py-3 text-[11px] font-semibold">ORDER NO</th>
                     <th className="text-left px-4 py-3 text-[11px] font-semibold">TABLE No.</th>
                     <th className="text-left px-4 py-3 text-[11px] font-semibold">ORDER NAME</th>
                     <th className="text-left px-4 py-3 text-[11px] font-semibold">TIME</th>
@@ -320,7 +321,7 @@ const Dashboard = () => {
                   ) : displayOrders.length > 0 ? (
                     displayOrders.map((order) => (
                       <tr key={order.id} className="hover:bg-[#f8f3f2]">
-                        <td className="px-4 py-3 text-sm text-slate-700">{order.id}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{order.orderNumber || 'N/A'}</td>
                         <td className="px-4 py-3 text-sm font-black text-orange-600">{order.tableNumber}</td>
                         <td className="px-4 py-3 text-sm font-medium text-slate-700">{order.name}</td>
                         <td className="px-4 py-3 text-sm text-slate-500">{order.time}</td>
