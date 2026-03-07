@@ -166,6 +166,9 @@ exports.createOrder = async (req, res) => {
                           }))
                           .filter((extra) => extra.name)
                     : [],
+                notes: Array.isArray(i.notes)
+                    ? i.notes.map((note) => String(note || '').trim()).filter(Boolean)
+                    : [],
                 // price plus any add ons; guard against NaN
                 price: (() => {
                     const base = Number(i.price) || 0;

@@ -51,8 +51,8 @@ const OrderDetailsPanel = ({ isOpen, order, onClose, onUpdateStatus }) => {
   };
 
   const getItemExtras = (it) => {
-    if (!Array.isArray(it.extras)) return [];
-    return it.extras
+    const explicitExtras = Array.isArray(it.extras)
+      ? it.extras
       .map((extra) => {
         const name = String(extra?.name || '').trim();
         if (!name) return null;
@@ -61,7 +61,20 @@ const OrderDetailsPanel = ({ isOpen, order, onClose, onUpdateStatus }) => {
           price: Number(extra?.price) || 0,
         };
       })
-      .filter(Boolean);
+      .filter(Boolean)
+      : [];
+
+    if (explicitExtras.length > 0) return explicitExtras;
+
+    // Fallback for older orders where customizations were only saved as notes.
+    const noteExtras = Array.isArray(it.notes)
+      ? it.notes
+          .map((note) => String(note || '').trim())
+          .filter(Boolean)
+          .map((note) => ({ name: note, price: 0 }))
+      : [];
+
+    return noteExtras;
   };
 
   return (

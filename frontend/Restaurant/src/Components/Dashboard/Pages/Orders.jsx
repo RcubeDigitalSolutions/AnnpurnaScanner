@@ -71,6 +71,7 @@ const Orders = () => {
           size: i.size,
           qty: i.quantity,
           extras: Array.isArray(i.extras) ? i.extras : [],
+          notes: Array.isArray(i.notes) ? i.notes : [],
         })),
       };
 
@@ -114,6 +115,7 @@ const Orders = () => {
             size: i.size,
             qty: i.quantity,
             extras: Array.isArray(i.extras) ? i.extras : [],
+            notes: Array.isArray(i.notes) ? i.notes : [],
           })),
         }));
         setOrders(mapped);
