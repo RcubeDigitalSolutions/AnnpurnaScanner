@@ -38,13 +38,26 @@ const Menu = () => {
 
   const ORDER_PHASE_LABELS = {
     pending: 'Pending',
-    accepted: 'Confirmed',
-    preparing: 'In Process',
-    ongoing: 'In Process',
-    served: 'Ready / Served',
-    completed: 'Completed',
-    paid: 'Completed',
+    accepted: 'Accept',
+    preparing: 'Accept',
+    ongoing: 'Ongoing',
+    served: 'Ongoing',
+    completed: 'Complete',
+    paid: 'Complete',
+    complete: 'Complete',
     cancelled: 'Cancelled',
+  }
+
+  const getCustomerOrderStatusLabel = (statusValue) => {
+    const status = String(statusValue || '').trim().toLowerCase()
+
+    if (['paid', 'completed', 'complete'].includes(status)) return ORDER_PHASE_LABELS.complete
+    if (['ongoing', 'served', 'in process', 'in_process', 'processing', 'producing', 'cooking'].includes(status)) {
+      return ORDER_PHASE_LABELS.ongoing
+    }
+    if (['accepted', 'confirmed', 'preparing'].includes(status)) return ORDER_PHASE_LABELS.accepted
+    if (status === 'cancelled') return ORDER_PHASE_LABELS.cancelled
+    return ORDER_PHASE_LABELS.pending
   }
 
   const ORDER_PHASE_CLASS = {
@@ -633,7 +646,7 @@ const Menu = () => {
                   Order #{latestOrder.orderNumber || 'N/A'} • ₹{Number(latestOrder.totalPrice || 0).toFixed(2)}
                 </p>
                 <p className="mt-0.5 text-xs text-sky-700">
-                  Status: {ORDER_PHASE_LABELS[latestOrder.status] || String(latestOrder.status || 'Pending')}
+                  Status: {getCustomerOrderStatusLabel(latestOrder.status)}
                 </p>
               </div>
               <button
